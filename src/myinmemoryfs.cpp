@@ -244,7 +244,17 @@ int MyInMemoryFS::fuseChmod(const char *path, mode_t mode) {
 int MyInMemoryFS::fuseChown(const char *path, uid_t uid, gid_t gid) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Changing the owner of %s\n", path);
+
+    // Check if the file exists
+    auto iterator = files.find(path);
+    if (iterator == files.end()) {
+        RETURN(-ENOENT); // File does not exist
+    }
+
+    // Set the file ownership
+    iterator->second.uid = uid;
+    iterator->second.gid = gid;
 
     RETURN(0);
 }
