@@ -484,11 +484,13 @@ void* MyInMemoryFS::fuseInit(struct fuse_conn_info *conn) {
 void MyInMemoryFS::fuseDestroy() {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOG("Freeing memory...");
 
+    files.clear();
+    openFiles.clear();
+
+    LOG("Shutting down");
 }
-
-// TODO: [PART 1] You may add your own additional methods here!
 
 // DO NOT EDIT ANYTHING BELOW THIS LINE!!!
 
