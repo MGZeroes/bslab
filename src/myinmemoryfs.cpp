@@ -136,9 +136,24 @@ int MyInMemoryFS::fuseUnlink(const char *path) {
 int MyInMemoryFS::fuseRename(const char *path, const char *newpath) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Renaming %s into %s\n", path, newpath);
 
-    return 0;
+    // Check if the old file exists
+    auto iterator = files.find(path);
+    if (iterator == files.end()) {
+        RETURN(-ENOENT); // File does not exist
+    }
+
+    // Check if the new file already exists
+    if (files.find(newpath) != files.end()) {
+        RETURN(-EEXIST); // File already exists
+    }
+
+    // Rename the file
+    files[newpath] = move(iterator->second);
+    files.erase(iterator);
+
+    RETURN(0);
 }
 
 /// @brief Get file meta data.
