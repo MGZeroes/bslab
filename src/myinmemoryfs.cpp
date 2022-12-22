@@ -311,28 +311,22 @@ int MyInMemoryFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
 int MyInMemoryFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Reading %s\n", path);
 
-    LOGF( "--> Trying to read %s, %lu, %lu\n", path, (unsigned long) offset, size );
+    // Find the file in the map and copy its contents into the buffer
+    if (files.find(path) == files.end()) {
+        RETURN(-ENOENT);
+    }
 
-    char file54Text[] = "Hello World From File54!\n";
-    char file349Text[] = "Hello World From File349!\n";
-    char *selectedText = NULL;
+    MyFsMemoryInfo& file = files[path];
+    if (offset >= file.size) {
+        RETURN(0);
+    }
 
-    // ... //
+    size_t bytes = min(size, file.size - offset);
+    memcpy(buf, file.content.data() + offset, bytes);
 
-    if ( strcmp( path, "/file54" ) == 0 )
-        selectedText = file54Text;
-    else if ( strcmp( path, "/file349" ) == 0 )
-        selectedText = file349Text;
-    else
-        return -ENOENT;
-
-    // ... //
-
-    memcpy( buf, selectedText + offset, size );
-
-    RETURN((int) (strlen( selectedText ) - offset));
+    RETURN(bytes);
 }
 
 /// @brief Write to a file.
