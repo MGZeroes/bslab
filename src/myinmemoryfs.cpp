@@ -24,7 +24,6 @@
 
 #undef DEBUG
 
-// TODO: Comment lines to reduce debug messages
 #define DEBUG
 #define DEBUG_METHODS
 #define DEBUG_RETURN_VALUES
@@ -46,20 +45,12 @@ using namespace std;
 /// @brief Constructor of the in-memory file system class.
 ///
 /// You may add your own constructor code here.
-MyInMemoryFS::MyInMemoryFS() : MyFS() {
-
-    // TODO: [PART 1] Add your constructor code here
-
-}
+MyInMemoryFS::MyInMemoryFS() : MyFS() {}
 
 /// @brief Destructor of the in-memory file system class.
 ///
 /// You may add your own destructor code here.
-MyInMemoryFS::~MyInMemoryFS() {
-
-    // TODO: [PART 1] Add your cleanup code here
-
-}
+MyInMemoryFS::~MyInMemoryFS() {}
 
 /// @brief Create a new file.
 ///
