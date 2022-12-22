@@ -109,7 +109,17 @@ int MyInMemoryFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
 int MyInMemoryFS::fuseUnlink(const char *path) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Deleting %s\n", path);
+
+    // Find file in the map
+    auto iterator = files.find(path);
+
+    if (iterator == files.end()) {
+        RETURN(-ENOENT); // File does not exist
+    }
+
+    // Remove the file from the map
+    files.erase(iterator);
 
     RETURN(0);
 }
