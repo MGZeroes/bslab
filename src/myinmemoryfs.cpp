@@ -165,9 +165,7 @@ int MyInMemoryFS::fuseRename(const char *path, const char *newpath) {
 int MyInMemoryFS::fuseGetattr(const char *path, struct stat *statbuf) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
-
-    LOGF( "\tAttributes of %s requested\n", path );
+    LOGF("\tAttributes of %s requested\n", path);
 
     // GNU's definitions of the attributes (http://www.gnu.org/software/libc/manual/html_node/Attribute-Meanings.html):
     // 		st_uid: 	The user ID of the file’s owner.
@@ -186,26 +184,28 @@ int MyInMemoryFS::fuseGetattr(const char *path, struct stat *statbuf) {
 
     statbuf->st_uid = getuid(); // The owner of the file/directory is the user who mounted the filesystem
     statbuf->st_gid = getgid(); // The group of the file/directory is the same as the group of the user who mounted the filesystem
-    statbuf->st_atime = time( NULL ); // The last "a"ccess of the file/directory is right now
-    statbuf->st_mtime = time( NULL ); // The last "m"odification of the file/directory is right now
+    statbuf->st_atime = time(NULL); // The last "a"ccess of the file/directory is right now
+    statbuf->st_mtime = time(NULL); // The last "m"odification of the file/directory is right now
 
-    int ret= 0;
-
-    if ( strcmp( path, "/" ) == 0 )
-    {
+    if (strcmp( path, "/" ) == 0) {
         statbuf->st_mode = S_IFDIR | 0755;
         statbuf->st_nlink = 2; // Why "two" hardlinks instead of "one"? The answer is here: http://unix.stackexchange.com/a/101536
     }
-    else if ( strcmp( path, "/file54" ) == 0 || ( strcmp( path, "/file349" ) == 0 ) )
-    {
-        statbuf->st_mode = S_IFREG | 0644;
-        statbuf->st_nlink = 1;
-        statbuf->st_size = 1024;
-    }
-    else
-        ret= -ENOENT;
+    else if(strlen(path) > 0) {
+        auto iterator = files.find(path);
 
-    RETURN(ret);
+        if(iterator != files.end()) {
+            statbuf->st_mode = iterator->second.mode;
+            statbuf->st_nlink = 1;
+            statbuf->st_size = iterator->second.size;
+            statbuf->st_mtime = iterator->second.mtime; // The last "m"odification of the file/directory is right now
+        }
+    }
+    else {
+        RETURN(-ENOENT);
+    }
+
+    RETURN(0);
 }
 
 /// @brief Change file permissions.
