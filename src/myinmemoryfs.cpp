@@ -470,9 +470,10 @@ void* MyInMemoryFS::fuseInit(struct fuse_conn_info *conn) {
         LOG("Starting logging...\n");
 
         LOG("Using in-memory mode");
-
-        // TODO: [PART 1] Implement your initialization methods here
     }
+
+    files = {};  // Initialize files
+    openFiles = {};  // Initialize openFiles
 
     RETURN(0);
 }
