@@ -270,7 +270,23 @@ int MyInMemoryFS::fuseChown(const char *path, uid_t uid, gid_t gid) {
 int MyInMemoryFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Opening %s\n", path);
+
+    //if (openFiles.size() > NUM_OPEN_FILES) {
+    //    RETURN(-EMFILE); // Too many open files
+    //}
+
+    // Check if the file is already open
+    auto iterator = openFiles.find(path);
+    if (iterator != openFiles.end()) {
+        RETURN(-EBUSY); // File is already open
+    }
+
+    // Check if the file exists
+    iterator = files.find(path);
+    if (iterator == files.end()) {
+        RETURN(-ENOENT); // File does not exist
+    }
 
     RETURN(0);
 }
