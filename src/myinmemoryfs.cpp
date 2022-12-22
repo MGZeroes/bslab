@@ -389,7 +389,16 @@ int MyInMemoryFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo)
 int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Set the size of %s\n", path);
+
+    // Check if the file exists
+    auto iterator = files.find(path);
+    if (iterator == files.end()) {
+        RETURN(-EEXIST); // File already exists
+    }
+
+    // Resize the file
+    iterator->second.content.resize(newSize);
 
     return 0;
 }
@@ -407,7 +416,9 @@ int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize) {
 int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Set the size of %s\n", path);
+
+    fuseTruncate(path, newSize);
 
     RETURN(0);
 }
