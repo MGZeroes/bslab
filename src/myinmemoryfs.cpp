@@ -347,9 +347,21 @@ int MyInMemoryFS::fuseRead(const char *path, char *buf, size_t size, off_t offse
 int MyInMemoryFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Writing %s\n", path);
 
-    RETURN(0);
+    // Find the file in the map and update its contents
+    if (files.find(path) == files.end()) {
+        RETURN(-ENOENT)
+    }
+
+    MyFsMemoryInfo& file = files[path];
+    if(offset + size > file.size) {
+        file.content.resize(offset + size);
+    }
+
+    memcpy((char*) (file.content.data() + offset), buf, size);
+
+    RETURN(size);
 }
 
 /// @brief Close a file.
