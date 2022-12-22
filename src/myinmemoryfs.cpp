@@ -33,10 +33,15 @@
 #include <string.h>
 #include <errno.h>
 
+#include <string>
+#include <map>
+
 #include "macros.h"
 #include "myfs.h"
 #include "myfs-info.h"
 #include "blockdevice.h"
+
+using namespace std;
 
 /// @brief Constructor of the in-memory file system class.
 ///
@@ -67,7 +72,30 @@ MyInMemoryFS::~MyInMemoryFS() {
 int MyInMemoryFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Creating %s\n", path);
+
+    // Check if the filesystem is full
+    if(files.size() >= NUM_DIR_ENTRIES) {
+        RETURN(-ENOSPC);
+    }
+
+    // Check if a file with the same name already exists
+    if(files.find(path) != files.end()) {
+        RETURN(-EEXIST);
+    }
+
+    // Check length of given filename
+    if (strlen(path) - 1 > NAME_LENGTH) {
+        RETURN(-EINVAL);
+    }
+
+    strcpy(files[path].name, path);
+    files[path].size = 0;
+    files[path].content = nullptr;
+    files[path].atime = files[path].ctime = files[path].mtime = time(NULL);
+    files[path].gid = getgid();
+    files[path].uid = getuid();
+    files[path].mode = mode;
 
     RETURN(0);
 }
