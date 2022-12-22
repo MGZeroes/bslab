@@ -218,7 +218,17 @@ int MyInMemoryFS::fuseGetattr(const char *path, struct stat *statbuf) {
 int MyInMemoryFS::fuseChmod(const char *path, mode_t mode) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Changing permissions of %s\n", path);
+
+    // Check if the file exists
+    auto iterator = files.find(path);
+    if (iterator == files.end()) {
+        RETURN(-ENOENT); // File does not exist
+    }
+
+    // Overwrite fileinfo values
+    iterator->second.mode = mode;
+    iterator->second.atime = iterator->second.ctime = iterator->second.mtime = time(NULL);
 
     RETURN(0);
 }
