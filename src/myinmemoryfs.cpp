@@ -409,8 +409,11 @@ int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize) {
         RETURN(-EEXIST);
     }
 
-    // Resize the file
+    // Truncate the file data
     iterator->second.content.resize(newSize);
+
+    // Update the modification time
+    iterator->second.mtime = time(nullptr);
 
     return 0;
 }
