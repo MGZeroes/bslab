@@ -293,22 +293,30 @@ int MyInMemoryFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
 
     LOGF("--> Opening %s\n", path);
 
-    //if (openFiles.size() > NUM_OPEN_FILES) {
-    //    RETURN(-EMFILE); // Too many open files
-    //}
-
-    // Check if the file is already open
-    auto iterator = openFiles.find(path);
-    if (iterator != openFiles.end()) {
-        RETURN(-EBUSY); // File is already open
+    // Check how many files are open
+    if (openFiles.size() > NUM_OPEN_FILES) {
+        LOG("Too many open files");
+        RETURN(-EMFILE);
     }
 
+    // Check if the file is already open
+    if (openFiles.find(path) != openFiles.end()) {
+        LOG("File is already open");
+        RETURN(-EPERM);
+    }
+
+    // Add the file to the open files set
+    openFiles.insert(path);
+
     // Check if the file exists
-    iterator = files.find(path);
+    auto iterator = files.find(path);
     if (iterator == files.end()) {
         LOG("File does not exists");
         RETURN(-ENOENT);
     }
+
+    // Store the file data pointer in the fuse_file_info struct
+    fileInfo->fh = reinterpret_cast<uint64_t>(&iterator->second.content);
 
     RETURN(0);
 }
@@ -341,15 +349,23 @@ int MyInMemoryFS::fuseRead(const char *path, char *buf, size_t size, off_t offse
         RETURN(-ENOENT);
     }
 
-    MyFsMemoryInfo& file = files[path];
-    if (offset >= file.content.size()) {
-        RETURN(0);
+    // Get a pointer to the file data
+    string* content = reinterpret_cast<string*>(fileInfo->fh);
+
+    // Check if the offset is within the file bounds
+    if (offset < 0 || offset >= content->size()) {
+        LOG("Offset is not within the file bounds");
+        RETURN(0);  // EOF
     }
 
-    size_t bytes = min(size, file.content.size() - offset);
-    memcpy(buf, file.content.data() + offset, bytes);
+    // Read data from the file
+    size_t count = min(size, content->size() - offset);
+    copy(content->begin() + offset, content->begin() + offset + count, buf);
 
-    RETURN(bytes);
+    // Update the access time
+    files.find(path)->second.atime = time(nullptr);
+
+    RETURN(count);
 }
 
 /// @brief Write to a file.
@@ -372,18 +388,26 @@ int MyInMemoryFS::fuseWrite(const char *path, const char *buf, size_t size, off_
 
     LOGF("--> Writing %s\n", path);
 
-    // Find the file in the map and update its contents
-    if (files.find(path) == files.end()) {
-        LOG("File does not exists");
-        RETURN(-ENOENT)
+    // Get a pointer to the file data
+    string* content = reinterpret_cast<string*>(fileInfo->fh);
+
+    // Check if the offset is within the file bounds
+    if (offset < 0) {
+        LOGF("Invalid offset: %d", offset);
+        return -EINVAL;
     }
 
-    MyFsMemoryInfo& file = files[path];
-    if(offset + size > file.content.size()) {
-        file.content.resize(offset + size);
+    // Truncate the file data
+    if (offset + size > content->size()) {
+        LOG("Truncate file");
+        content->resize(offset + size);
     }
 
-    memcpy((char*) (file.content.data() + offset), buf, size);
+    // Write data to the file
+    copy(buf, buf + size, content->begin() + offset);
+
+    // Update the modification time
+    files.find(path)->second.mtime = time(nullptr);
 
     RETURN(size);
 }
@@ -397,7 +421,16 @@ int MyInMemoryFS::fuseWrite(const char *path, const char *buf, size_t size, off_
 int MyInMemoryFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Removing the file %s\n", path);
+
+    // Check if the file exists
+    if (files.find(path) == files.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Remove the file from the open files set
+    openFiles.erase(path);
 
     RETURN(0);
 }
@@ -446,7 +479,14 @@ int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize, struct fuse_file
 
     LOGF("--> Set the size of %s\n", path);
 
-    fuseTruncate(path, newSize);
+    // Get a pointer to the file data
+    string* content = reinterpret_cast<string*>(fileInfo->fh);
+
+    // Truncate the file data
+    content->resize(newSize);
+
+    // Update the modification time
+    files.find(path)->second.mtime = time(nullptr);
 
     RETURN(0);
 }

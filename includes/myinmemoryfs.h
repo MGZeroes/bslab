@@ -10,6 +10,7 @@
 #include <cmath>
 #include <string>
 #include <map>
+#include <unordered_set>
 
 #include "myfs.h"
 #include "blockdevice.h"
@@ -26,7 +27,7 @@ public:
     static MyInMemoryFS *Instance();
 
     map<string, MyFsMemoryInfo> files;
-    map<string, MyFsMemoryInfo> openFiles;
+    unordered_set<string> openFiles;
 
 
     MyInMemoryFS();
