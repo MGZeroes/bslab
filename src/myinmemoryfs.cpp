@@ -310,11 +310,11 @@ int MyInMemoryFS::fuseRead(const char *path, char *buf, size_t size, off_t offse
     }
 
     MyFsMemoryInfo& file = files[path];
-    if (offset >= file.size) {
+    if (offset >= file.content.size()) {
         RETURN(0);
     }
 
-    size_t bytes = min(size, file.size - offset);
+    size_t bytes = min(size, file.content.size() - offset);
     memcpy(buf, file.content.data() + offset, bytes);
 
     RETURN(bytes);
@@ -346,7 +346,7 @@ int MyInMemoryFS::fuseWrite(const char *path, const char *buf, size_t size, off_
     }
 
     MyFsMemoryInfo& file = files[path];
-    if(offset + size > file.size) {
+    if(offset + size > file.content.size()) {
         file.content.resize(offset + size);
     }
 
