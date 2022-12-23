@@ -185,7 +185,6 @@ int MyInMemoryFS::fuseGetattr(const char *path, struct stat *statbuf) {
     statbuf->st_uid = getuid(); // The owner of the file/directory is the user who mounted the filesystem
     statbuf->st_gid = getgid(); // The group of the file/directory is the same as the group of the user who mounted the filesystem
     statbuf->st_atime = time(NULL); // The last "a"ccess of the file/directory is right now
-    statbuf->st_mtime = time(NULL); // The last "m"odification of the file/directory is right now
 
     if (strcmp( path, "/" ) == 0) {
         statbuf->st_mode = S_IFDIR | 0755;
