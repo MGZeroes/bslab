@@ -14,19 +14,23 @@
 #define NUM_DIR_ENTRIES 64
 #define NUM_OPEN_FILES 64
 
-#include <string>
+#include <vector>
 
 using namespace std;
 
 // TODO: Add structures of your file system here
 struct MyFsMemoryInfo {
-    string content;                 // Data
-    __uid_t uid;                    // User ID
-    __gid_t gid;                    // Gruppen ID
-    __mode_t mode;                  // File mode
-    __time_t  atime;          // Time of last access.
-    __time_t  mtime;          // Time of last modification.
-    __time_t  ctime;          // Time of last status change.
+
+    // File data
+    std::vector<char> content;
+
+    // File metadata
+    __uid_t uid; // User ID
+    __gid_t gid; // Group ID
+    __mode_t mode; // File mode
+    __time_t  atime; // Time of last access
+    __time_t  mtime; // Time of last modification
+    __time_t  ctime; // Time of last status change
 };
 
 #endif /* myfs_structs_h */

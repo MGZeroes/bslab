@@ -32,7 +32,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <string>
+#include <vector>
 #include <map>
 
 #include "macros.h"
@@ -349,7 +349,7 @@ int MyInMemoryFS::fuseRead(const char *path, char *buf, size_t size, off_t offse
     }
 
     // Get a pointer to the file data
-    string* content = reinterpret_cast<string*>(fileInfo->fh);
+    vector<char>* content = reinterpret_cast<vector<char>*>(fileInfo->fh);
 
     // Check if the offset is within the file bounds
     if (offset < 0 || offset >= content->size()) {
@@ -388,7 +388,7 @@ int MyInMemoryFS::fuseWrite(const char *path, const char *buf, size_t size, off_
     LOGF("--> Writing %s\n", path);
 
     // Get a pointer to the file data
-    string* content = reinterpret_cast<string*>(fileInfo->fh);
+    vector<char>* content = reinterpret_cast<vector<char>*>(fileInfo->fh);
 
     // Check if the offset is within the file bounds
     if (offset < 0) {
@@ -481,7 +481,7 @@ int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize, struct fuse_file
     LOGF("--> Set the size of %s\n", path);
 
     // Get a pointer to the file data
-    string* content = reinterpret_cast<string*>(fileInfo->fh);
+    vector<char>* content = reinterpret_cast<vector<char>*>(fileInfo->fh);
 
     // Truncate the file data
     content->resize(newSize);
