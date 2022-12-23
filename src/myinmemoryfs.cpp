@@ -270,9 +270,12 @@ int MyInMemoryFS::fuseChown(const char *path, uid_t uid, gid_t gid) {
         RETURN(-ENOENT);
     }
 
-    // Set the file ownership
+    // Update the uid and gid fields
     iterator->second.uid = uid;
     iterator->second.gid = gid;
+
+    // Update the modification time
+    iterator->second.mtime = time(nullptr);
 
     RETURN(0);
 }
