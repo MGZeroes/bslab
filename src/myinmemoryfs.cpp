@@ -241,9 +241,11 @@ int MyInMemoryFS::fuseChmod(const char *path, mode_t mode) {
         RETURN(-ENOENT);
     }
 
-    // Overwrite fileinfo values
+    // Update the mode field
     iterator->second.mode = mode;
-    iterator->second.atime = iterator->second.ctime = iterator->second.mtime = time(NULL);
+
+    // Update the modification time
+    iterator->second.mtime = time(nullptr);
 
     RETURN(0);
 }
