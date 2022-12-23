@@ -139,21 +139,30 @@ int MyInMemoryFS::fuseRename(const char *path, const char *newpath) {
     LOGF("--> Renaming %s into %s\n", path, newpath);
 
     // Check if the old file exists
-    auto iterator = files.find(path);
-    if (iterator == files.end()) {
+    auto oldIterator = files.find(path);
+    if (oldIterator == files.end()) {
         LOG("File does not exist");
         RETURN(-ENOENT);
     }
 
     // Check if the new file already exists
-    if (files.find(newpath) != files.end()) {
+    auto newIterator = files.find(newpath);
+    if (newIterator != files.end()) {
         LOG("File already exists");
         RETURN(-EEXIST);
     }
 
-    // Rename the file
-    files[newpath] = move(iterator->second);
-    files.erase(iterator);
+    // Create a copy of the FileData struct for the new file
+    MyFsMemoryInfo newFile = oldIterator->second;
+
+    // Insert the new file into the map
+    files.emplace(newpath, move(newFile));
+
+    // Remove the old file from the map
+    files.erase(oldIterator);
+
+    // Update the change time of the new file
+    files.find(newpath)->second.ctime = time(nullptr);
 
     RETURN(0);
 }
