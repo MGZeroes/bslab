@@ -67,11 +67,13 @@ int MyInMemoryFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
 
     // Check if the filesystem is full
     if(files.size() >= NUM_DIR_ENTRIES) {
+        LOG("Filesystem is full");
         RETURN(-ENOSPC);
     }
 
     // Check if a file with the same name already exists
     if(files.find(path) != files.end()) {
+        LOG("File already exists");
         RETURN(-EEXIST);
     }
 
@@ -106,7 +108,8 @@ int MyInMemoryFS::fuseUnlink(const char *path) {
     auto iterator = files.find(path);
 
     if (iterator == files.end()) {
-        RETURN(-ENOENT); // File does not exist
+        LOG("File does not exist");
+        RETURN(-ENOENT);
     }
 
     // Remove the file from the map
@@ -132,12 +135,14 @@ int MyInMemoryFS::fuseRename(const char *path, const char *newpath) {
     // Check if the old file exists
     auto iterator = files.find(path);
     if (iterator == files.end()) {
-        RETURN(-ENOENT); // File does not exist
+        LOG("File does not exist");
+        RETURN(-ENOENT);
     }
 
     // Check if the new file already exists
     if (files.find(newpath) != files.end()) {
-        RETURN(-EEXIST); // File already exists
+        LOG("File already exists");
+        RETURN(-EEXIST);
     }
 
     // Rename the file
@@ -183,6 +188,7 @@ int MyInMemoryFS::fuseGetattr(const char *path, struct stat *statbuf) {
         statbuf->st_nlink = 2; // Why "two" hardlinks instead of "one"? The answer is here: http://unix.stackexchange.com/a/101536
     }
     else if(strlen(path) > 0) {
+        LOG("Path length > 0");
         auto iterator = files.find(path);
 
         if(iterator != files.end()) {
@@ -193,6 +199,7 @@ int MyInMemoryFS::fuseGetattr(const char *path, struct stat *statbuf) {
         }
     }
     else {
+        LOG("Path length <= 0");
         RETURN(-ENOENT);
     }
 
@@ -214,7 +221,8 @@ int MyInMemoryFS::fuseChmod(const char *path, mode_t mode) {
     // Check if the file exists
     auto iterator = files.find(path);
     if (iterator == files.end()) {
-        RETURN(-ENOENT); // File does not exist
+        LOG("File does not exists");
+        RETURN(-ENOENT);
     }
 
     // Overwrite fileinfo values
@@ -240,7 +248,8 @@ int MyInMemoryFS::fuseChown(const char *path, uid_t uid, gid_t gid) {
     // Check if the file exists
     auto iterator = files.find(path);
     if (iterator == files.end()) {
-        RETURN(-ENOENT); // File does not exist
+        LOG("File does not exists");
+        RETURN(-ENOENT);
     }
 
     // Set the file ownership
@@ -276,7 +285,8 @@ int MyInMemoryFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
     // Check if the file exists
     iterator = files.find(path);
     if (iterator == files.end()) {
-        RETURN(-ENOENT); // File does not exist
+        LOG("File does not exists");
+        RETURN(-ENOENT);
     }
 
     RETURN(0);
@@ -306,6 +316,7 @@ int MyInMemoryFS::fuseRead(const char *path, char *buf, size_t size, off_t offse
 
     // Find the file in the map and copy its contents into the buffer
     if (files.find(path) == files.end()) {
+        LOG("File does not exists");
         RETURN(-ENOENT);
     }
 
@@ -342,6 +353,7 @@ int MyInMemoryFS::fuseWrite(const char *path, const char *buf, size_t size, off_
 
     // Find the file in the map and update its contents
     if (files.find(path) == files.end()) {
+        LOG("File does not exists");
         RETURN(-ENOENT)
     }
 
@@ -385,7 +397,8 @@ int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize) {
     // Check if the file exists
     auto iterator = files.find(path);
     if (iterator == files.end()) {
-        RETURN(-EEXIST); // File already exists
+        LOG("File already exists");
+        RETURN(-EEXIST);
     }
 
     // Resize the file
@@ -429,12 +442,12 @@ int MyInMemoryFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t fille
 
     LOGF("--> Getting The List of Files of %s\n", path);
 
-    // Add the "." and ".." entries
+    LOG("Add the '.' and '..' entries");
     filler(buf, ".", NULL, 0); // Current Directory
     filler(buf, "..", NULL, 0); // Parent Directory
 
-    // If the user is trying to show the files/directories of the root directory show the following
-    if (strcmp( path, "/" ) == 0) {
+    // If the user is trying to show the files of the root directory show the following
+    if (strcmp(path, "/") == 0) {
         // Add the names of the files in the directory
         for (const auto& iterator : files) {
             LOGF("Add '%s'", iterator.first.c_str());
