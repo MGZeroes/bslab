@@ -437,7 +437,8 @@ int MyInMemoryFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t fille
     if (strcmp( path, "/" ) == 0) {
         // Add the names of the files in the directory
         for (const auto& iterator : files) {
-            filler(buf, iterator.second.name, NULL, 0);
+            LOGF("Add '%s'", iterator.first.c_str());
+            filler(buf, (iterator.first.c_str() + 1), NULL, 0);
         }
     }
 
