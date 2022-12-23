@@ -71,24 +71,28 @@ int MyInMemoryFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
         RETURN(-ENOSPC);
     }
 
+    // Check length of given filename
+    if (strlen(path) - 1 > NAME_LENGTH) {
+        LOG("Filename too long");
+        RETURN(-EINVAL);
+    }
+
     // Check if a file with the same name already exists
     if(files.find(path) != files.end()) {
         LOG("File already exists");
         RETURN(-EEXIST);
     }
 
-    // Check length of given filename
-    if (strlen(path) - 1 > NAME_LENGTH) {
-        RETURN(-EINVAL);
-    }
+    LOG("Create the file");
+    MyFsMemoryInfo file;
+    file.content = string();
+    file.atime = file.ctime = file.mtime = time(NULL);
+    file.gid = getgid();
+    file.uid = getuid();
+    file.mode = mode;
 
-    strcpy(files[path].name, path);
-    files[path].size = 0;
-    files[path].content = nullptr;
-    files[path].atime = files[path].ctime = files[path].mtime = time(NULL);
-    files[path].gid = getgid();
-    files[path].uid = getuid();
-    files[path].mode = mode;
+    LOG("Add file to filesystem");
+    files[path] = file;
 
     RETURN(0);
 }
