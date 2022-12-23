@@ -244,8 +244,8 @@ int MyInMemoryFS::fuseChmod(const char *path, mode_t mode) {
     // Update the mode field
     iterator->second.mode = mode;
 
-    // Update the modification time
-    iterator->second.mtime = time(nullptr);
+    // Update the changed time
+    iterator->second.ctime = time(nullptr);
 
     RETURN(0);
 }
@@ -274,8 +274,8 @@ int MyInMemoryFS::fuseChown(const char *path, uid_t uid, gid_t gid) {
     iterator->second.uid = uid;
     iterator->second.gid = gid;
 
-    // Update the modification time
-    iterator->second.mtime = time(nullptr);
+    // Update the changed time
+    iterator->second.ctime = time(nullptr);
 
     RETURN(0);
 }
@@ -406,8 +406,9 @@ int MyInMemoryFS::fuseWrite(const char *path, const char *buf, size_t size, off_
     // Write data to the file
     copy(buf, buf + size, content->begin() + offset);
 
-    // Update the modification time
-    files.find(path)->second.mtime = time(nullptr);
+    // Update the modification and changed time
+    auto iterator = files.find(path);
+    iterator->second.mtime = iterator->second.ctime = time(nullptr);
 
     RETURN(size);
 }
@@ -458,8 +459,9 @@ int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize) {
     // Truncate the file data
     iterator->second.content.resize(newSize);
 
-    // Update the modification time
+    // Update the modification and changed time
     iterator->second.mtime = time(nullptr);
+    iterator->second.ctime = time(nullptr);
 
     return 0;
 }
@@ -485,8 +487,10 @@ int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize, struct fuse_file
     // Truncate the file data
     content->resize(newSize);
 
-    // Update the modification time
-    files.find(path)->second.mtime = time(nullptr);
+    // Update the modification and changed time
+    auto iterator = files.find(path);
+    iterator->second.mtime = time(nullptr);
+    iterator->second.ctime = time(nullptr);
 
     RETURN(0);
 }
