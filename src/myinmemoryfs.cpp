@@ -110,9 +110,8 @@ int MyInMemoryFS::fuseUnlink(const char *path) {
 
     LOGF("--> Deleting %s\n", path);
 
-    // Find file in the map
+    // Check if the file exists
     auto iterator = files.find(path);
-
     if (iterator == files.end()) {
         LOG("File does not exist");
         RETURN(-ENOENT);
