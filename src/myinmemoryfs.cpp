@@ -195,12 +195,15 @@ int MyInMemoryFS::fuseGetattr(const char *path, struct stat *statbuf) {
         LOG("Path length > 0");
         auto iterator = files.find(path);
 
-        if(iterator != files.end()) {
-            statbuf->st_mode = iterator->second.mode;
-            statbuf->st_nlink = 1;
-            statbuf->st_size = iterator->second.size;
-            statbuf->st_mtime = iterator->second.mtime; // The last "m"odification of the file/directory is right now
+        if(iterator == files.end()) {
+            LOG("File does not exist");
+            RETURN(-ENOENT);
         }
+
+        statbuf->st_mode = iterator->second.mode;
+        statbuf->st_nlink = 1;
+        statbuf->st_size = iterator->second.content.size();
+        statbuf->st_mtime = iterator->second.mtime; // The last "m"odification of the file/directory is right now
     }
     else {
         LOG("Path length <= 0");
