@@ -84,6 +84,7 @@ int MyInMemoryFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
     }
 
     LOG("Create the file");
+    // Create a new MyFsMemoryInfo struct for the file
     MyFsMemoryInfo file;
     file.content = string();
     file.atime = file.ctime = file.mtime = time(NULL);
@@ -92,7 +93,8 @@ int MyInMemoryFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
     file.mode = mode;
 
     LOG("Add file to filesystem");
-    files[path] = file;
+    // Insert the file into the map
+    files.emplace(path, move(file));
 
     RETURN(0);
 }
