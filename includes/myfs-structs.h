@@ -22,7 +22,7 @@ using namespace std;
 struct MyFsMemoryInfo {
 
     // File data
-    std::vector<char> content;
+    vector<char> content;
 
     // File metadata
     __uid_t uid; // User ID
