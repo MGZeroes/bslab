@@ -293,6 +293,12 @@ void* MyOnDiskFS::fuseInit(struct fuse_conn_info *conn) {
 
             // TODO: [PART 2] Read existing structures form file
 
+            readSuperblock(ret);
+
+            LOGF("%d, %d, %d, %d, %d, %d", superBlock.blockSize, superBlock.numBlocks, superBlock.numFreeBlocks,
+                 superBlock.dmapBlock, superBlock.fatBlock, superBlock.rootBlock);
+
+
         } else if(ret == -ENOENT) {
             LOG("Container file does not exist, creating a new one");
 
@@ -301,6 +307,8 @@ void* MyOnDiskFS::fuseInit(struct fuse_conn_info *conn) {
             if (ret >= 0) {
 
                 // TODO: [PART 2] Create empty structures in file
+
+                writeSuperblock(ret);
 
             }
         }
