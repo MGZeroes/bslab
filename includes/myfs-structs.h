@@ -46,4 +46,13 @@ struct MyFsDiskInfo {
     __time_t ctime; // Time of last status change.  64bit
 };
 
+struct SuperBlock {
+    uint32_t blockSize = BLOCK_SIZE; // Size of a block in bytes
+    uint32_t numBlocks = 32;        // Total number of blocks in the file system
+    uint32_t numFreeBlocks = 29;    // Number of free blocks in the file system
+    uint8_t dmapBlock = 1;          // Block number of the data map
+    uint8_t fatBlock = 2;           // Block number of the file allocation table
+    uint8_t rootBlock = 3;          // Block number of the root directory
+};
+
 #endif /* myfs_structs_h */
