@@ -6,12 +6,17 @@
 #ifndef MYFS_MYONDISKFS_H
 #define MYFS_MYONDISKFS_H
 
+#include <unistd.h>
+#include <cstring>
+
 #include "myfs.h"
 
 /// @brief On-disk implementation of a simple file system.
 class MyOnDiskFS : public MyFS {
 protected:
     // BlockDevice blockDevice;
+
+    SuperBlock superBlock;
 
 public:
     static MyOnDiskFS *Instance();
@@ -42,6 +47,31 @@ public:
     virtual void fuseDestroy();
 
     // TODO: Add methods of your file system here
+private:
+
+    int readSuperblock(int fd) {
+
+        int ret;
+        char *buffer = (char *) malloc(BLOCK_SIZE);
+
+        // Read Superblock
+        ret = this->blockDevice->read(0, buffer);
+        memcpy(&superBlock, buffer, sizeof(SuperBlock));
+
+        return ret;
+    }
+
+    int writeSuperblock(int fd) {
+
+        char *buffer = (char*) malloc(BLOCK_SIZE);
+
+        //write superblock
+        memset(buffer, 0, BLOCK_SIZE);
+        //LOG("cleared buffer");
+        memcpy(buffer, &superBlock, sizeof(SuperBlock));
+        //LOG("memcopied superblock to buffer");
+        return this->blockDevice->write(0, buffer);
+    }
 
 };
 
