@@ -71,4 +71,9 @@ struct DMapBlock {
     uint16_t bitmap = numeric_limits<uint16_t>::max();  // Bitmap of free blocks in this dmap block
 };
 
+struct FATEntry {
+    uint16_t nextBlock = 0; // Block number of the next block in the file
+    bool isLast = true;     // Flag indicating whether this is the last block in the file
+};
+
 #endif /* myfs_structs_h */
