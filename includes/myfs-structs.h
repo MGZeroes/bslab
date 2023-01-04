@@ -45,16 +45,15 @@ struct MyFsMemoryInfo {
 };
 
 struct MyFsDiskInfo {
-
-    // File metadata
-    size_t size; // Data Size   64bit
-    int32_t data; // Block Pos  32bit
-    __uid_t uid; // User ID     32bit
-    __gid_t gid; // Gruppen ID  32bit
-    __mode_t mode; // File mode 32bit
-    __time_t atime; // Time of last access.         64bit
-    __time_t mtime; // Time of last modification.   64bit
-    __time_t ctime; // Time of last status change.  64bit
+    char name[NAME_LENGTH];  // File name
+    size_t size;    // File size            64bit
+    int32_t data;  // First block allocated to the file  32bit
+    __uid_t uid;    // Owner user ID        32bit
+    __gid_t gid;    // Owner group ID       32bit
+    __mode_t mode;  // File permissions     32bit
+    __time_t atime; // Last accessed time   64bit
+    __time_t mtime; // Last modified time   64bit
+    __time_t ctime; // Creation time        64bit
 };
 
 struct SuperBlock {
