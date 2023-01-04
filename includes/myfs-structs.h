@@ -14,6 +14,17 @@
 #define NUM_DIR_ENTRIES 64
 #define NUM_OPEN_FILES 64
 
+
+#define DISK_SIZE 33554432      // 2^25 (33.554432 MB)
+#define FILE_BLOCK_COUNT 65536  // DISK_SIZE / BLOCK_SIZE
+
+#define SUPERBLOCK_BLOCK_COUNT 1
+#define DMAP_BLOCK_COUNT 1
+#define FAT_BLOCK_COUNT 512
+#define FAT_ENTRIES_PER_BLOCK 128
+#define ROOT_BLOCK_COUNT 64
+#define MAX_BLOCK_COUNT 66242 // 33915904 B (33.915904 MB)
+
 #include <vector>
 
 using namespace std;
