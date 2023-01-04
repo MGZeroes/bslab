@@ -15,14 +15,25 @@
 #define NUM_OPEN_FILES 64
 
 
+#define FILE_BLOCK_BLOCK_OFFSET 1
+
+#define SUPERBLOCK_COUNT 1
+#define SUPERBLOCK_OFFSET 0
+
+#define DMAP_BLOCK_COUNT 1
+#define DMAP_BLOCK_OFFSET 1
+
+#define FAT_BLOCK_COUNT 512
+#define FAT_BLOCK_OFFSET 2
+#define FAT_ENTRIES_PER_BLOCK 128
+
+#define ROOT_BLOCK_COUNT 64
+#define ROOT_BLOCK_OFFSET 514
+
 #define DISK_SIZE 33554432      // 2^25 (33.554432 MB)
 #define FILE_BLOCK_COUNT 65536  // DISK_SIZE / BLOCK_SIZE
+#define FILE_BLOCK_OFFSET 578
 
-#define SUPERBLOCK_BLOCK_COUNT 1
-#define DMAP_BLOCK_COUNT 1
-#define FAT_BLOCK_COUNT 512
-#define FAT_ENTRIES_PER_BLOCK 128
-#define ROOT_BLOCK_COUNT 64
 #define MAX_BLOCK_COUNT 66242 // 33915904 B (33.915904 MB)
 
 #include <vector>
@@ -58,17 +69,17 @@ struct MyFsDiskInfo {
 };
 
 struct SuperBlock {
-    uint32_t blockSize = BLOCK_SIZE; // Size of a block in bytes
-    uint32_t numBlocks = MAX_BLOCK_COUNT; // Total number of blocks in the file system
-    uint16_t numFreeBlocks = numeric_limits<uint16_t>::max();    // Number of free blocks in the file system
-    uint8_t dmapBlockOffset = 1;          // Block number of the data map
-    uint8_t fatBlockOffset = 2;           // Block number of the file allocation table
-    uint8_t rootBlockOffset = 514;          // Block number of the root directory
+    uint32_t blockSize = BLOCK_SIZE;                            // Size of a block in bytes
+    uint32_t numBlocks = MAX_BLOCK_COUNT;                       // Total number of blocks in the file system
+    uint8_t dmapBlockOffset = DMAP_BLOCK_OFFSET;                // Block number of the data map
+    uint8_t fatBlockOffset = FAT_BLOCK_OFFSET;                  // Block number of the file allocation table
+    uint8_t rootBlockOffset = ROOT_BLOCK_OFFSET;                // Block number of the root directory
+    uint16_t fileBlockOffset = FILE_BLOCK_OFFSET;               // Block number of the root directory
 };
 
 struct DMapBlock {
-    uint16_t numFreeBlocks = numeric_limits<uint16_t>::max();     // Number of free blocks in this dmap block
-    uint16_t bitmap = numeric_limits<uint16_t>::max();  // Bitmap of free blocks in this dmap block
+    uint16_t numFreeBlocks = numeric_limits<uint16_t>::max();   // Number of free blocks in this dmap block
+    uint16_t bitmap = numeric_limits<uint16_t>::max();          // Bitmap of free blocks in this dmap block
 };
 
 struct FATEntry {
