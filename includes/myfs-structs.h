@@ -66,4 +66,9 @@ struct SuperBlock {
     uint8_t rootBlockOffset = 514;          // Block number of the root directory
 };
 
+struct DMapBlock {
+    uint16_t numFreeBlocks = numeric_limits<uint16_t>::max();     // Number of free blocks in this dmap block
+    uint16_t bitmap = numeric_limits<uint16_t>::max();  // Bitmap of free blocks in this dmap block
+};
+
 #endif /* myfs_structs_h */
