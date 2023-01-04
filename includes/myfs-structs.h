@@ -48,7 +48,7 @@ struct MyFsMemoryInfo {
 struct MyFsDiskInfo {
     char name[NAME_LENGTH];  // File name
     size_t size;    // File size            64bit
-    int32_t data;  // First block allocated to the file  32bit
+    uint16_t data;  // First block allocated to the file  32bit
     __uid_t uid;    // Owner user ID        32bit
     __gid_t gid;    // Owner group ID       32bit
     __mode_t mode;  // File permissions     32bit
@@ -60,7 +60,7 @@ struct MyFsDiskInfo {
 struct SuperBlock {
     uint32_t blockSize = BLOCK_SIZE; // Size of a block in bytes
     uint32_t numBlocks = MAX_BLOCK_COUNT; // Total number of blocks in the file system
-    uint32_t numFreeBlocks = numeric_limits<uint16_t>::max();    // Number of free blocks in the file system
+    uint16_t numFreeBlocks = numeric_limits<uint16_t>::max();    // Number of free blocks in the file system
     uint8_t dmapBlockOffset = 1;          // Block number of the data map
     uint8_t fatBlockOffset = 2;           // Block number of the file allocation table
     uint8_t rootBlockOffset = 514;          // Block number of the root directory
