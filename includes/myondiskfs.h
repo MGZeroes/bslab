@@ -84,6 +84,58 @@ private:
         return 0;
     }
 
+    int readDmap(int fd) {
+
+        // Read the blocks of the DMAP to the file system
+        for (int i = 0; i < DMAP_BLOCK_COUNT; i++) {
+
+            // Allocate a buffer for the DMAP
+            char *buffer = (char*) malloc(BLOCK_SIZE);
+            memset(buffer, 0, BLOCK_SIZE);
+
+            // Write the entries to the buffer
+            this->blockDevice->read(i + superBlock.dmapBlockOffset, buffer);
+
+            // Calculate the start index of the entries in this block
+            int startIndex = i * DMAP_ENTRIES_PER_BLOCK;
+            size_t bytes = sizeof(DMapEntry) * DMAP_ENTRIES_PER_BLOCK;
+
+            // Copy the buffer into the entries for this block
+            memcpy(&dmap[startIndex], buffer, bytes);
+
+            // Free the buffer
+            free(buffer);
+        }
+
+        return 0;
+    }
+
+    int writeDmap(int fd) {
+
+        // Write the blocks of the DMAP to the file system
+        for (int i = 0; i < DMAP_BLOCK_COUNT; i++) {
+
+            // Allocate a buffer for the DMAP
+            char *buffer = (char*) malloc(BLOCK_SIZE);
+            memset(buffer, 0, BLOCK_SIZE);
+
+            // Calculate the start index of the entries in this block
+            int startIndex = i * DMAP_ENTRIES_PER_BLOCK;
+            size_t bytes = sizeof(DMapEntry) * DMAP_ENTRIES_PER_BLOCK;
+
+            // Copy the entries for this block into the buffer
+            memcpy(buffer, &dmap[startIndex], bytes);
+
+            // Write the entries to the block
+            this->blockDevice->write(i + superBlock.dmapBlockOffset, buffer);
+
+            // Free the buffer
+            free(buffer);
+        }
+
+        return 0;
+    }
+
 };
 
 #endif //MYFS_MYONDISKFS_H
