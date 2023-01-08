@@ -64,7 +64,7 @@ private:
 
         // Read Superblock
         ret = this->blockDevice->read(0, buffer);
-        memcpy(&superBlock, buffer, sizeof(SuperBlock));
+        memcpy(&this->superBlock, buffer, sizeof(SuperBlock));
         free(buffer);
 
         return ret;
@@ -77,7 +77,7 @@ private:
         //write superblock
         memset(buffer, 0, BLOCK_SIZE);
         //LOG("cleared buffer");
-        memcpy(buffer, &superBlock, sizeof(SuperBlock));
+        memcpy(buffer, &this->superBlock, sizeof(SuperBlock));
         this->blockDevice->write(0, buffer);
         free(buffer);
 
@@ -94,14 +94,14 @@ private:
             memset(buffer, 0, BLOCK_SIZE);
 
             // Write the entries to the buffer
-            this->blockDevice->read(i + superBlock.dmapBlockOffset, buffer);
+            this->blockDevice->read(i + this->superBlock.dmapBlockOffset, buffer);
 
             // Calculate the start index of the entries in this block
             int startIndex = i * DMAP_ENTRIES_PER_BLOCK;
             size_t bytes = sizeof(DMapEntry) * DMAP_ENTRIES_PER_BLOCK;
 
             // Copy the buffer into the entries for this block
-            memcpy(&dmap[startIndex], buffer, bytes);
+            memcpy(&this->dmap[startIndex], buffer, bytes);
 
             // Free the buffer
             free(buffer);
@@ -124,10 +124,10 @@ private:
             size_t bytes = sizeof(DMapEntry) * DMAP_ENTRIES_PER_BLOCK;
 
             // Copy the entries for this block into the buffer
-            memcpy(buffer, &dmap[startIndex], bytes);
+            memcpy(buffer, &this->dmap[startIndex], bytes);
 
             // Write the entries to the block
-            this->blockDevice->write(i + superBlock.dmapBlockOffset, buffer);
+            this->blockDevice->write(i + this->superBlock.dmapBlockOffset, buffer);
 
             // Free the buffer
             free(buffer);
@@ -146,14 +146,14 @@ private:
             memset(buffer, 0, BLOCK_SIZE);
 
             // Write the entries to the buffer
-            this->blockDevice->read(i + superBlock.fatBlockOffset, buffer);
+            this->blockDevice->read(i + this->superBlock.fatBlockOffset, buffer);
 
             // Calculate the start index of the entries in this block
             int startIndex = i * FAT_ENTRIES_PER_BLOCK;
             size_t bytes = sizeof(FATEntry) * FAT_ENTRIES_PER_BLOCK;
 
             // Copy the buffer into the entries for this block
-            memcpy(&fat[startIndex], buffer, bytes);
+            memcpy(&this->fat[startIndex], buffer, bytes);
 
             // Free the buffer
             free(buffer);
@@ -176,10 +176,10 @@ private:
             size_t bytes = sizeof(FATEntry) * FAT_ENTRIES_PER_BLOCK;
 
             // Copy the entries for this block into the buffer
-            memcpy(buffer, &fat[startIndex], bytes);
+            memcpy(buffer, &this->fat[startIndex], bytes);
 
             // Write the entries to the block
-            this->blockDevice->write(i + superBlock.fatBlockOffset, buffer);
+            this->blockDevice->write(i + this->superBlock.fatBlockOffset, buffer);
 
             // Free the buffer
             free(buffer);
@@ -191,7 +191,7 @@ private:
     int readRoot(int fd) {
 
         // Clear the root map before it gets read
-        root.clear();
+        this->root.clear();
 
         // Read the blocks of the Root to the file system
         for (int i = 0; i < NUM_DIR_ENTRIES; i++) {
@@ -201,7 +201,7 @@ private:
             memset(buffer, 0, BLOCK_SIZE);
 
             // Write the entries to the buffer
-            this->blockDevice->read(i + superBlock.rootBlockOffset, buffer);
+            this->blockDevice->read(i + this->superBlock.rootBlockOffset, buffer);
 
             // Copy the buffer into the entries for this block
             MyFsDiskInfo file;
@@ -211,7 +211,7 @@ private:
             if(strcmp(file.name, "") != 0) {
                 string key = "/";
                 key.append(file.name);
-                root.emplace(key, file);
+                this->root.emplace(key, file);
             }
 
             // Free the buffer
@@ -230,7 +230,7 @@ private:
             memset(buffer, 0, BLOCK_SIZE);
 
             // Clear the block
-            this->blockDevice->write(i + superBlock.rootBlockOffset, buffer);
+            this->blockDevice->write(i + this->superBlock.rootBlockOffset, buffer);
 
             // Free the buffer
             free(buffer);
@@ -238,7 +238,7 @@ private:
 
         // Write root
         size_t index = 0;
-        for (const auto& entry : root) {
+        for (const auto& entry : this->root) {
 
             // Allocate a buffer for the Root
             char *buffer = (char*) malloc(BLOCK_SIZE);
@@ -248,7 +248,7 @@ private:
             memcpy(buffer, &entry.second, sizeof(MyFsDiskInfo));
 
             // Write the entries to the block
-            this->blockDevice->write(index + superBlock.rootBlockOffset, buffer);
+            this->blockDevice->write(index + this->superBlock.rootBlockOffset, buffer);
 
             // Free the buffer
             free(buffer);
