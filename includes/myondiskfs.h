@@ -8,6 +8,10 @@
 
 #include <unistd.h>
 #include <cstring>
+#include <array>
+#include <map>
+#include <unordered_set>
+#include <iterator>
 
 #include "myfs.h"
 
@@ -17,6 +21,10 @@ protected:
     // BlockDevice blockDevice;
 
     SuperBlock superBlock;
+    array<DMapEntry, FILE_BLOCK_COUNT> dmap;
+    array<FATEntry, FILE_BLOCK_COUNT> fat;
+    map<string, MyFsDiskInfo> root;
+    unordered_set<string> openFiles;
 
 public:
     static MyOnDiskFS *Instance();
