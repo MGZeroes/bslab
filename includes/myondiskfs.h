@@ -57,6 +57,7 @@ private:
         // Read Superblock
         ret = this->blockDevice->read(0, buffer);
         memcpy(&superBlock, buffer, sizeof(SuperBlock));
+        free(buffer);
 
         return ret;
     }
@@ -69,8 +70,10 @@ private:
         memset(buffer, 0, BLOCK_SIZE);
         //LOG("cleared buffer");
         memcpy(buffer, &superBlock, sizeof(SuperBlock));
-        //LOG("memcopied superblock to buffer");
-        return this->blockDevice->write(0, buffer);
+        this->blockDevice->write(0, buffer);
+        free(buffer);
+
+        return 0;
     }
 
 };
