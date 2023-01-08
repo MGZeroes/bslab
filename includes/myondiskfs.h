@@ -260,6 +260,23 @@ private:
         }
     }
 
+    int findFreeBlock(int fd) {
+
+        // Check if a block is available
+        if(!this->superBlock.numFreeBlocks) {
+            return -ENOSPC; // No space left on device
+        }
+
+        // Iterate through the bits of the value
+        for (int i = 0; i < FILE_BLOCK_COUNT; ++i) {
+            // Check if the i-th block is free
+            if(this->dmap.at(i).isFree)
+                return i; // The i-th block is free
+        }
+
+        return -ERANGE; // No bits set to 1 found
+    }
+
 };
 
 #endif //MYFS_MYONDISKFS_H
