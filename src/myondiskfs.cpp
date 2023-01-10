@@ -196,7 +196,42 @@ int MyOnDiskFS::fuseRename(const char *path, const char *newpath) {
 int MyOnDiskFS::fuseGetattr(const char *path, struct stat *statbuf) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    LOGF("--> Get the metadata of %s", path);
+
+    readRoot();
+
+    statbuf->st_uid = getuid(); // The owner of the file/directory is the user who mounted the filesystem
+    statbuf->st_gid = getgid(); // The group of the file/directory is the same as the group of the user who mounted the filesystem
+    statbuf->st_atime = time(NULL); // The last "a"ccess of the file/directory is right now
+
+    if (strcmp(path, "/") == 0) {
+        statbuf->st_mode = S_IFDIR | 0755;
+        statbuf->st_nlink = 2; // Why "two" hardlinks instead of "one"? The answer is here: http://unix.stackexchange.com/a/101536
+    }
+    else if(strlen(path) > 0) {
+        LOG("Path length > 0");
+
+        // Check if the file exists
+        auto iterator = this->root.find(path);
+        if(iterator == this->root.end()) {
+            LOG("File does not exist");
+            RETURN(-ENOENT);
+        }
+
+        statbuf->st_mode = iterator->second.mode;
+        statbuf->st_nlink = 1;
+        statbuf->st_size = iterator->second.size;
+
+        // The last "a"ccess and "m"odification  of the file is right now
+        statbuf->st_atime = iterator->second.atime = time(NULL);
+        statbuf->st_mtime = iterator->second.mtime = time(NULL);
+    }
+    else {
+        LOG("Path length <= 0");
+        RETURN(-ENOENT);
+    }
+
+    writeRoot();
 
     RETURN(0);
 }
