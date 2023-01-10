@@ -463,7 +463,16 @@ int MyOnDiskFS::fuseWrite(const char *path, const char *buf, size_t size, off_t 
 int MyOnDiskFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    LOGF("--> Closing %s", path);
+
+    // Check if the file exists
+    if (this->root.find(path) == this->root.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Remove the file from the open files set
+    this->openFiles.erase(path);
 
     RETURN(0);
 }
