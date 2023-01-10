@@ -385,6 +385,36 @@ private:
         return firstBlock;
     }
 
+    int freeBlocks(uint16_t firstBlock, uint16_t numBlocks) {
+
+        uint16_t block = firstBlock;
+
+        // Count the number of allocated blocks
+        uint16_t numAllocBlocks = 1;
+        while(!this->fat.at(block).isLast) {
+            block = this->fat.at(block).nextBlock;
+            numAllocBlocks++;
+        }
+
+        block = firstBlock;
+
+        // Free number of blocks
+        for (size_t i = 0; i < numAllocBlocks; i++) {
+
+            // Check if the last number of blocks are reached
+            if(i >= (numAllocBlocks - numBlocks)) {
+                this->clearBlock(block);
+
+                // Check if the new last block is reached
+            } else if((i+1) == (numAllocBlocks - numBlocks)) {
+                this->fat.at(block).isLast = true;
+            }
+
+            // Get the next block
+            block = this->fat.at(block).nextBlock;
+        }
+    }
+
 };
 
 #endif //MYFS_MYONDISKFS_H
