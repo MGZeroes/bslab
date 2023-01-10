@@ -335,6 +335,18 @@ private:
         return -ERANGE; // No bits set to 1 found
     }
 
+    uint16_t setBlock(uint16_t block) {
+        this->dmap.at(block).isFree = false;
+        this->superBlock.numFreeBlocks--;
+        return block;
+    }
+
+    uint16_t clearBlock(uint16_t block) {
+        this->dmap.at(block).isFree = true;
+        this->superBlock.numFreeBlocks++;
+        return block;
+    }
+
 };
 
 #endif //MYFS_MYONDISKFS_H
