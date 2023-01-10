@@ -575,3 +575,41 @@ TEST_CASE("T-2.2", "[Part_2]") {
     unlink(file_1);
     unlink(file_2);
 }
+
+TEST_CASE("T-2.3", "[Part_2]") {
+    printf("Testcase 2.3: Readdir function does not return a deleted file\n");
+
+    int fd;
+    DIR *dir;
+    struct dirent *ent;
+
+    bool filepath = false;
+
+    // Remove file (just to be sure)
+    unlink(FILENAME);
+
+    // Create file
+    fd = open(FILENAME, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    // Remove file again
+    unlink(FILENAME);
+
+    // Open directory
+    REQUIRE((dir = opendir("./")) != NULL);
+
+    // Readdir
+    while((ent = readdir(dir)) != NULL) {
+        if(strcmp(ent->d_name, FILENAME) == 0)
+            filepath = true;
+    }
+
+    // Check if Readdir was correct
+    REQUIRE(!filepath);
+
+    // Close directory
+    REQUIRE(closedir(dir) == 0);
+}
