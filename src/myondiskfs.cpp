@@ -155,7 +155,34 @@ int MyOnDiskFS::fuseUnlink(const char *path) {
 int MyOnDiskFS::fuseRename(const char *path, const char *newpath) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    readRoot();
+
+    LOGF("--> Renaming %s into %s", path, newpath);
+
+    // Check if the old file exists
+    auto oldIterator = this->root.find(path);
+    if (oldIterator == this->root.end()) {
+        LOG("File does not exist");
+        RETURN(-ENOENT);
+    }
+
+    // Check if the new file already exists
+    auto newIterator = this->root.find(newpath);
+    if (newIterator != this->root.end()) {
+        LOG("File already exists");
+        RETURN(-EEXIST);
+    }
+
+    // Move the file to the new name in the map
+    this->root.emplace(newpath, move(oldIterator->second));
+
+    // Remove the old file from the map
+    this->root.erase(oldIterator);
+
+    // Update the change time of the new file
+    this->root.find(newpath)->second.ctime = time(NULL);
+
+    writeRoot();
 
     RETURN(0);
 }
