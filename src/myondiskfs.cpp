@@ -488,7 +488,78 @@ int MyOnDiskFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo) {
 int MyOnDiskFS::fuseTruncate(const char *path, off_t newSize) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    readDmap();
+    readFat();
+    readRoot();
+
+    LOGF("--> Set the size of %s", path);
+
+    // Check if the file exists
+    auto iterator = this->root.find(path);
+    if (iterator == this->root.end()) {
+        LOG("File does not exist");
+        RETURN(-EEXIST);
+    }
+
+    LOGF("Change the size from %d to %d", iterator->second.size, newSize);
+
+    // Calculate the new block number
+    off_t newBlockNumber = bytesToBlocks(newSize);
+
+    // Check if the file has blocks
+    if(iterator->second.size == 0 && newSize > 0) {
+
+        LOG("File is empty. Init first block");
+
+        // Check if enough blocks available
+        if (this->superBlock.numFreeBlocks < newBlockNumber) {
+            LOG("No space left on device");
+            RETURN(-ENOSPC);
+        }
+
+        LOGF("Allocate %d block(s)", newBlockNumber);
+        iterator->second.data = allocateBlocks(-1, newBlockNumber);
+        LOGF("First block is %d", iterator->second.data);
+
+    } else if(newSize > 0) {
+
+        // Calculate the current block number
+        off_t oldBlockNumber = bytesToBlocks(iterator->second.size);
+        LOGF("Change the required blocks from %d to %d", oldBlockNumber, newBlockNumber);
+
+        // Truncate block number
+        if (newBlockNumber < oldBlockNumber) {
+            LOG("Free blocks to fit the new size");
+            freeBlocks(iterator->second.data, newBlockNumber);
+
+        } else if (newBlockNumber > oldBlockNumber) {
+
+            // Check if enough blocks are available
+            if (this->superBlock.numFreeBlocks < (newBlockNumber - oldBlockNumber)) {
+                LOG("No space left on device");
+                RETURN(-ENOSPC);
+            }
+
+            LOG("Allocate blocks to fit the new size");
+            allocateBlocks(iterator->second.data, newBlockNumber);
+
+        }
+
+    } else if(newSize == 0 && iterator->second.size > 0) {
+        LOG("Freeing all allocated files");
+        // Free all blocks that are allocated by this file
+        freeBlocks(iterator->second.data, bytesToBlocks(iterator->second.size));
+    }
+
+    // Truncate the file size
+    iterator->second.size = newSize;
+
+    // Update the changed and modified time
+    iterator->second.ctime = iterator->second.mtime = time(NULL);
+
+    writeDmap();
+    writeFat();
+    writeRoot();
 
     RETURN(0);
 }
@@ -506,7 +577,7 @@ int MyOnDiskFS::fuseTruncate(const char *path, off_t newSize) {
 int MyOnDiskFS::fuseTruncate(const char *path, off_t newSize, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    fuseTruncate(path, newSize);
 
     RETURN(0);
 }
