@@ -347,6 +347,44 @@ private:
         return block;
     }
 
+    uint16_t allocateBlocks(int firstBlock, uint16_t numBlocks) {
+
+        // Check if enough blocks are available
+        if(this->superBlock.numFreeBlocks < numBlocks) {
+            return -ENOSPC; // Not enough space left on device
+        }
+
+        uint16_t block = firstBlock;
+
+        // Check if there is a starting block
+        if(firstBlock >= 0) {
+            // Iterate to the last block
+            while(!this->fat.at(block).isLast)
+                block = this->fat.at(block).nextBlock;
+
+        } else {
+            // Init first block
+            block = this->findFreeBlock(0);
+            this->fat.at(block).isLast = false;
+            firstBlock = this->setBlock(block);
+            numBlocks--;
+        }
+
+        // Add number of blocks
+        for (size_t i = 0; i < numBlocks; ++i) {
+            uint16_t freeBlock = this->findFreeBlock(0);
+            this->fat.at(block).isLast = false;
+            this->fat.at(block).nextBlock = freeBlock;
+            block = this->setBlock(freeBlock);
+        }
+
+        // Set the last block as last
+        this->fat.at(block).isLast = true;
+
+        // Return first block
+        return firstBlock;
+    }
+
 };
 
 #endif //MYFS_MYONDISKFS_H
