@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <string.h>
 
+#include <dirent.h>
+
 #include "../catch/catch.hpp"
 
 #include "tools.hpp"
@@ -16,6 +18,11 @@
 #define FILENAME "file"
 #define SMALL_SIZE 1024
 #define LARGE_SIZE 20*1024*1024
+#define OVERFLOW_SIZE ((1 << 16) + 1) * 512
+#define MAX_SIZE (1 << 16) * 512
+
+#define FBLOCKS 512*4
+#define FOBLOCKS 512+(512/2)
 
 TEST_CASE("T-1.01", "[Part_1]") {
     printf("Testcase 1.1: Create & remove a single file\n");
@@ -482,6 +489,365 @@ TEST_CASE("T-1.10", "[Part_1]") {
     // Read from the file
     REQUIRE(read(fd, r, LARGE_SIZE) == LARGE_SIZE);
     REQUIRE(memcmp(r, w, LARGE_SIZE) == 0);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    // remove file
+    REQUIRE(unlink(FILENAME) >= 0);
+}
+
+TEST_CASE("T-2.1", "[Part_2]") {
+    printf("Testcase 2.1: Readdir function returns '.' and '..'\n");
+
+    DIR *dir;
+    struct dirent *ent;
+
+    bool current_path = false;
+    bool parent_path = false;
+
+    // Open directory
+    REQUIRE((dir = opendir("./")) != NULL);
+
+    // Readdir
+    while((ent = readdir(dir)) != NULL) {
+        if(strcmp(ent->d_name, ".") == 0)
+            current_path = true;
+
+        if(strcmp(ent->d_name, "..") == 0)
+            parent_path = true;
+    }
+
+    // Check if Readdir was correct
+    REQUIRE(current_path);
+    REQUIRE(parent_path);
+
+    // Close directory
+    REQUIRE(closedir(dir) == 0);
+}
+
+TEST_CASE("T-2.2", "[Part_2]") {
+    printf("Testcase 2.2: Readdir function returns the correct list of files\n");
+
+    int fd;
+    DIR *dir;
+    struct dirent *ent;
+
+    bool file_1_path = false;
+    bool file_2_path = false;
+
+    const char* file_1 = "file_1";
+    const char* file_2 = "file_2";
+
+    // Remove files (just to be sure)
+    unlink(file_1);
+    unlink(file_2);
+
+    // Create file_1
+    fd = open(file_1, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Close file_1
+    REQUIRE(close(fd) >= 0);
+
+    // Create file_2
+    fd = open(file_2, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Close file_2
+    REQUIRE(close(fd) >= 0);
+
+    // Open directory
+    REQUIRE((dir = opendir("./")) != NULL);
+
+    // Readdir
+    while((ent = readdir(dir)) != NULL) {
+        if(strcmp(ent->d_name, file_1) == 0)
+            file_1_path = true;
+
+        if(strcmp(ent->d_name, file_2) == 0)
+            file_2_path = true;
+    }
+
+    // Check if Readdir was correct
+    REQUIRE(file_1_path);
+    REQUIRE(file_2_path);
+
+    // Close directory
+    REQUIRE(closedir(dir) == 0);
+
+    // Remove files
+    unlink(file_1);
+    unlink(file_2);
+}
+
+TEST_CASE("T-2.3", "[Part_2]") {
+    printf("Testcase 2.3: Readdir function does not return a deleted file\n");
+
+    int fd;
+    DIR *dir;
+    struct dirent *ent;
+
+    bool filepath = false;
+
+    // Remove file (just to be sure)
+    unlink(FILENAME);
+
+    // Create file
+    fd = open(FILENAME, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    // Remove file again
+    unlink(FILENAME);
+
+    // Open directory
+    REQUIRE((dir = opendir("./")) != NULL);
+
+    // Readdir
+    while((ent = readdir(dir)) != NULL) {
+        if(strcmp(ent->d_name, FILENAME) == 0)
+            filepath = true;
+    }
+
+    // Check if Readdir was correct
+    REQUIRE(!filepath);
+
+    // Close directory
+    REQUIRE(closedir(dir) == 0);
+}
+
+TEST_CASE("T-2.4", "[Part_2]") {
+    printf("Testcase 2.4: Open more than 64 files\n");
+
+    int fileSize= SMALL_SIZE;
+    int writeSize= 16;
+    const char *filename = "file";
+    int noFiles= 64;
+
+    int ret;
+    size_t b;
+
+    int fd[noFiles];
+
+    // open all files
+    for(int f= 0; f < noFiles; f++) {
+        char nFilename[strlen(filename)+10];
+        sprintf(nFilename, "%s_%d", filename, f);
+        unlink(nFilename);
+        fd[f]= open(nFilename, O_EXCL | O_RDWR | O_CREAT, 0666);
+        REQUIRE(fd[f] >= 0);
+    }
+
+
+    REQUIRE(open("File65", O_EXCL | O_RDWR | O_CREAT, 0666) < 0);
+
+
+    // close all files
+    for(int f= 0; f < noFiles; f++) {
+        ret= close(fd[f]);
+        REQUIRE(ret >= 0);
+        char nFilename[strlen(filename)+10];
+        sprintf(nFilename, "%s_%d", filename, f);
+        unlink(nFilename);
+    }
+
+}
+
+TEST_CASE("T-2.5", "[Part_5]") {
+    printf("Testcase 2.5: Write in middle of file\n");
+    int fd;
+
+    // remove file (just to be sure)
+    unlink(FILENAME);
+    char* buf = new char[FBLOCKS];;
+    // set up read & write buffer
+    char* r= new char[FBLOCKS];
+    memset(r, 0, FBLOCKS);
+    gen_random(r, FBLOCKS);
+    char* w= new char[FOBLOCKS];
+    memset(w, 0, FOBLOCKS);
+    gen_random(w, FOBLOCKS);
+
+    char* g = new char[FBLOCKS];
+    memcpy(g, r, FBLOCKS);
+    memcpy(g, w, FOBLOCKS);
+
+    // Create file
+    fd = open(FILENAME, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Write to the file
+    REQUIRE(write(fd, r, FBLOCKS) == FBLOCKS);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    // Open file again
+    fd = open(FILENAME, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+    // Read from the file
+    REQUIRE(read(fd, buf, FBLOCKS) == FBLOCKS);
+    REQUIRE(memcmp(buf, r, FBLOCKS) == 0);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    fd = open(FILENAME, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+    REQUIRE(write(fd, w, FOBLOCKS) == FOBLOCKS);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    // Open file again
+    fd = open(FILENAME, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+
+
+    REQUIRE(read(fd, buf, FBLOCKS) == FBLOCKS);
+    REQUIRE(memcmp(buf, g, FBLOCKS) == 0);
+
+    REQUIRE(close(fd) >= 0);
+    // remove file
+    REQUIRE(unlink(FILENAME) >= 0);
+}
+
+TEST_CASE("T-2.6", "[Part_5]") {
+    printf("Testcase 2.6: Test FAT\n");
+    int fd;
+
+    const char *filename = "fi8234";
+    // remove file (just to be sure)
+    unlink(FILENAME);
+    unlink(filename);
+    char* buf = new char[FBLOCKS];;
+    // set up read & write buffer
+    char* r= new char[FBLOCKS];
+    memset(r, 0, FBLOCKS);
+    gen_random(r, FBLOCKS);
+    char* w= new char[FOBLOCKS];
+    memset(w, 0, FOBLOCKS);
+    gen_random(w, FOBLOCKS);
+
+    char* g = new char[FBLOCKS];
+    memcpy(g, r, FBLOCKS);
+    memcpy(g, w, FOBLOCKS);
+
+    // Create file
+    fd = open(FILENAME, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Write to the file
+    REQUIRE(write(fd, w, FOBLOCKS) == FOBLOCKS);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    fd = open(filename, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Write to the file
+    REQUIRE(write(fd, w, FOBLOCKS) == FOBLOCKS);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+
+
+    // Open file again
+    fd = open(FILENAME, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+    // Read from the file
+    REQUIRE(read(fd, buf, FOBLOCKS) == FOBLOCKS);
+    REQUIRE(memcmp(buf, w, FOBLOCKS) == 0);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    // Open file again
+    fd = open(filename, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+    // Read from the file
+    REQUIRE(read(fd, buf, FOBLOCKS) == FOBLOCKS);
+    REQUIRE(memcmp(buf, w, FOBLOCKS) == 0);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+
+
+    // Create file
+    fd = open(FILENAME, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+    // Write to the file
+    REQUIRE(write(fd, r, FBLOCKS) == FBLOCKS);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+
+
+    fd = open(FILENAME, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+    REQUIRE(read(fd, buf, FBLOCKS) == FBLOCKS);
+    REQUIRE(memcmp(buf, r, FBLOCKS) == 0);
+
+    REQUIRE(close(fd) >= 0);
+
+    fd = open(filename, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+    REQUIRE(read(fd, buf, FOBLOCKS) == FOBLOCKS);
+    REQUIRE(memcmp(buf, w, FOBLOCKS) == 0);
+
+    REQUIRE(close(fd) >= 0);
+
+    // remove file
+    REQUIRE(unlink(FILENAME) >= 0);
+    REQUIRE(unlink(filename) >= 0);
+}
+
+TEST_CASE("T-2.7", "[Part_2]") {
+    printf("Testcase 2.7: Write a Overflow file\n");
+    int fd;
+
+    // remove file (just to be sure)
+    unlink(FILENAME);
+
+    // set up read & write buffer
+    char* r= new char[OVERFLOW_SIZE];
+    memset(r, 0, OVERFLOW_SIZE);
+    char* w= new char[OVERFLOW_SIZE];
+    memset(w, 0, OVERFLOW_SIZE);
+    gen_random(w, OVERFLOW_SIZE);
+
+    // Create file
+    fd = open(FILENAME, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Write to the file
+    REQUIRE(write(fd, w, OVERFLOW_SIZE) == MAX_SIZE);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    // Open file again
+    fd = open(FILENAME, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+    // Read from the file
+    REQUIRE(read(fd, r, OVERFLOW_SIZE) == MAX_SIZE);
+    REQUIRE(memcmp(r, w, OVERFLOW_SIZE) != 0);
 
     // Close file
     REQUIRE(close(fd) >= 0);
