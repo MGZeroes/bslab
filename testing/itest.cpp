@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <string.h>
 
+#include <dirent.h>
+
 #include "../catch/catch.hpp"
 
 #include "tools.hpp"
@@ -488,4 +490,33 @@ TEST_CASE("T-1.10", "[Part_1]") {
 
     // remove file
     REQUIRE(unlink(FILENAME) >= 0);
+}
+
+TEST_CASE("T-2.1", "[Part_2]") {
+    printf("Testcase 2.1: Readdir function returns '.' and '..'\n");
+
+    DIR *dir;
+    struct dirent *ent;
+
+    bool current_path = false;
+    bool parent_path = false;
+
+    // Open directory
+    REQUIRE((dir = opendir("./")) != NULL);
+
+    // Readdir
+    while((ent = readdir(dir)) != NULL) {
+        if(strcmp(ent->d_name, ".") == 0)
+            current_path = true;
+
+        if(strcmp(ent->d_name, "..") == 0)
+            parent_path = true;
+    }
+
+    // Check if Readdir was correct
+    REQUIRE(current_path);
+    REQUIRE(parent_path);
+
+    // Close directory
+    REQUIRE(closedir(dir) == 0);
 }
