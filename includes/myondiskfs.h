@@ -57,7 +57,7 @@ public:
     // TODO: Add methods of your file system here
 private:
 
-    int readSuperblock(int fd) {
+    int readSuperblock() {
 
         int ret;
         char *buffer = (char *) malloc(BLOCK_SIZE);
@@ -70,7 +70,7 @@ private:
         return ret;
     }
 
-    int writeSuperblock(int fd) {
+    int writeSuperblock() {
 
         char *buffer = (char*) malloc(BLOCK_SIZE);
 
@@ -84,7 +84,7 @@ private:
         return 0;
     }
 
-    int readDmap(int fd) {
+    int readDmap() {
 
         // Read the blocks of the DMAP to the file system
         for (int i = 0; i < DMAP_BLOCK_COUNT; i++) {
@@ -110,7 +110,7 @@ private:
         return 0;
     }
 
-    int writeDmap(int fd) {
+    int writeDmap() {
 
         // Write the blocks of the DMAP to the file system
         for (int i = 0; i < DMAP_BLOCK_COUNT; i++) {
@@ -136,7 +136,7 @@ private:
         return 0;
     }
 
-    int readFat(int fd) {
+    int readFat() {
 
         // Read the blocks of the FAT to the file system
         for (int i = 0; i < FAT_BLOCK_COUNT; i++) {
@@ -162,7 +162,7 @@ private:
         return 0;
     }
 
-    int writeFat(int fd) {
+    int writeFat() {
 
         // Write the blocks of the FAT to the file system
         for (int i = 0; i < FAT_BLOCK_COUNT; i++) {
@@ -188,7 +188,7 @@ private:
         return 0;
     }
 
-    int readRoot(int fd) {
+    int readRoot() {
 
         // Clear the root map before it gets read
         this->root.clear();
@@ -220,7 +220,7 @@ private:
 
     }
 
-    int writeRoot(int fd) {
+    int writeRoot() {
 
         // Clear the root container before it gets written
         for (int i = 0; i < NUM_DIR_ENTRIES; ++i) {
