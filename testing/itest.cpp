@@ -520,3 +520,58 @@ TEST_CASE("T-2.1", "[Part_2]") {
     // Close directory
     REQUIRE(closedir(dir) == 0);
 }
+
+TEST_CASE("T-2.2", "[Part_2]") {
+    printf("Testcase 2.2: Readdir function returns the correct list of files\n");
+
+    int fd;
+    DIR *dir;
+    struct dirent *ent;
+
+    bool file_1_path = false;
+    bool file_2_path = false;
+
+    const char* file_1 = "file_1";
+    const char* file_2 = "file_2";
+
+    // Remove files (just to be sure)
+    unlink(file_1);
+    unlink(file_2);
+
+    // Create file_1
+    fd = open(file_1, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Close file_1
+    REQUIRE(close(fd) >= 0);
+
+    // Create file_2
+    fd = open(file_2, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Close file_2
+    REQUIRE(close(fd) >= 0);
+
+    // Open directory
+    REQUIRE((dir = opendir("./")) != NULL);
+
+    // Readdir
+    while((ent = readdir(dir)) != NULL) {
+        if(strcmp(ent->d_name, file_1) == 0)
+            file_1_path = true;
+
+        if(strcmp(ent->d_name, file_2) == 0)
+            file_2_path = true;
+    }
+
+    // Check if Readdir was correct
+    REQUIRE(file_1_path);
+    REQUIRE(file_2_path);
+
+    // Close directory
+    REQUIRE(closedir(dir) == 0);
+
+    // Remove files
+    unlink(file_1);
+    unlink(file_2);
+}
