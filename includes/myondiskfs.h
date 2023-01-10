@@ -260,6 +260,35 @@ private:
         }
     }
 
+    int readFileBlock(uint16_t block, char* buf) {
+        // Allocate a buffer for a file block
+        char *buffer = (char*) malloc(BLOCK_SIZE);
+        memset(buffer, 0, BLOCK_SIZE);
+
+        // Write the content to the buffer
+        int ret = this->blockDevice->read(block + this->superBlock.fileBlockOffset, buffer);
+
+        // Write the block buffer to the output buffer
+        memcpy(buf, buffer, BLOCK_SIZE);
+
+        // Free the buffer
+        free(buffer);
+
+        return ret;
+    }
+
+    int readFile(uint16_t block, char* buf, uint16_t numBlocks) {
+
+        // iterate through every block
+        for (int i = 0; i < numBlocks; i++) {
+            // Write file block into the buffer
+            readFileBlock(block, buf + (i * BLOCK_SIZE));
+            block = fat.at(block).nextBlock;
+        }
+
+        return 0;
+    }
+
     int findFreeBlock(int fd) {
 
         // Check if a block is available
