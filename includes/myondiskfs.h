@@ -326,7 +326,7 @@ private:
         }
 
         // Iterate through the bits of the value
-        for (int i = 0; i < FILE_BLOCK_COUNT; ++i) {
+        for (size_t i = 0; i < FILE_BLOCK_COUNT; i++) {
             // Check if the i-th block is free
             if(this->dmap.at(i).isFree)
                 return i; // The i-th block is free
