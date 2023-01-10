@@ -366,9 +366,70 @@ int MyOnDiskFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
 int MyOnDiskFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    LOGF("--> Reading %s", path);
+    readFat();
+    readRoot();
 
-    RETURN(0);
+    // Check if the file exists
+    auto iterator = this->root.find(path);
+    if (this->root.find(path) == this->root.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Check if the offset is within the file bounds
+    if (offset < 0 || offset >= iterator->second.size) {
+        LOG("Offset is not within the file bounds");
+        size = 0; // The Number of bytes read
+    }
+
+    // Check if the file has blocks to read
+    if(iterator->second.size == 0) {
+        LOG("File is empty");
+        size = 0; // The Number of bytes read
+    }
+
+    // Check if we need to read
+    if(size > 0) {
+
+        off_t blockOffset = offset / BLOCK_SIZE;
+        off_t byteOffset = offset % BLOCK_SIZE;
+        size_t numBlocks = ceil((double) (byteOffset + size) / BLOCK_SIZE);
+
+        // Get the first block
+        uint16_t firstBlock = iterator->second.data;
+        for (int i = 0; i < blockOffset; ++i) {
+            // Check if we are in the bounds of the FAT
+            if(fat.at(firstBlock).isLast && (i < (blockOffset-1))) {
+                LOG("File table overflow");
+                RETURN(-ENFILE);
+            }
+
+            // Set next block as starting block
+            firstBlock = fat.at(firstBlock).nextBlock;
+        }
+
+        LOGF("Trying to read %d bytes with an offset of %d bytes", size, offset);
+        LOGF("Reading %d file blocks starting from block %d", numBlocks, firstBlock);
+
+        // Allocate a buffer for the read size
+        char *buffer = (char*) malloc(size);
+        memset(buffer, 0, size);
+
+        // Write the file into the buffer
+        readFile(firstBlock, buffer, numBlocks);
+
+        // Write the buffer to the output buffer with offset and size
+        memcpy(buf, (buffer + byteOffset), size);
+        free(buffer);
+    }
+
+    // Update the access time
+    iterator->second.atime = time(NULL);
+
+    writeRoot();
+
+    RETURN(size);
 }
 
 /// @brief Write to a file.
