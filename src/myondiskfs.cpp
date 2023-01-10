@@ -290,14 +290,10 @@ void* MyOnDiskFS::fuseInit(struct fuse_conn_info *conn) {
 
         if(ret >= 0) {
             LOG("Container file does exist, reading");
-
-            // TODO: [PART 2] Read existing structures form file
-
-            readSuperblock(ret);
-
-            LOGF("%d, %d, %d, %d, %d, %d", superBlock.blockSize, superBlock.numBlocks, superBlock.numFreeBlocks,
-                 superBlock.dmapBlock, superBlock.fatBlock, superBlock.rootBlock);
-
+            readSuperblock();
+            readDmap();
+            readFat();
+            readRoot();
 
         } else if(ret == -ENOENT) {
             LOG("Container file does not exist, creating a new one");
@@ -306,9 +302,17 @@ void* MyOnDiskFS::fuseInit(struct fuse_conn_info *conn) {
 
             if (ret >= 0) {
 
-                // TODO: [PART 2] Create empty structures in file
+                LOG("Initialing the container layout");
+                writeSuperblock();
+                writeDmap();
+                writeFat();
+                writeRoot();
 
-                writeSuperblock(ret);
+                LOG("Initialing the last block in the container file");
+                char *buffer = (char*) malloc(BLOCK_SIZE);
+                memset(buffer, 0, BLOCK_SIZE);
+                this->blockDevice->write(MAX_BLOCK_COUNT-1, buffer);
+                free(buffer);
 
             }
         }
