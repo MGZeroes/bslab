@@ -19,6 +19,9 @@
 #define SMALL_SIZE 1024
 #define LARGE_SIZE 20*1024*1024
 
+#define FBLOCKS 512*4
+#define FOBLOCKS 512+(512/2)
+
 TEST_CASE("T-1.01", "[Part_1]") {
     printf("Testcase 1.1: Create & remove a single file\n");
 
@@ -649,4 +652,66 @@ TEST_CASE("T-2.4", "[Part_2]") {
         unlink(nFilename);
     }
 
+}
+
+TEST_CASE("T-2.5", "[Part_5]") {
+    printf("Testcase 2.5: Write in middle of file\n");
+    int fd;
+
+    // remove file (just to be sure)
+    unlink(FILENAME);
+    char* buf = new char[FBLOCKS];;
+    // set up read & write buffer
+    char* r= new char[FBLOCKS];
+    memset(r, 0, FBLOCKS);
+    gen_random(r, FBLOCKS);
+    char* w= new char[FOBLOCKS];
+    memset(w, 0, FOBLOCKS);
+    gen_random(w, FOBLOCKS);
+
+    char* g = new char[FBLOCKS];
+    memcpy(g, r, FBLOCKS);
+    memcpy(g, w, FOBLOCKS);
+
+    // Create file
+    fd = open(FILENAME, O_EXCL | O_RDWR | O_CREAT, 0666);
+    REQUIRE(fd >= 0);
+
+    // Write to the file
+    REQUIRE(write(fd, r, FBLOCKS) == FBLOCKS);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    // Open file again
+    fd = open(FILENAME, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+    // Read from the file
+    REQUIRE(read(fd, buf, FBLOCKS) == FBLOCKS);
+    REQUIRE(memcmp(buf, r, FBLOCKS) == 0);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    fd = open(FILENAME, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+    REQUIRE(write(fd, w, FOBLOCKS) == FOBLOCKS);
+
+    // Close file
+    REQUIRE(close(fd) >= 0);
+
+    // Open file again
+    fd = open(FILENAME, O_EXCL | O_RDWR, 0666);
+    REQUIRE(fd >= 0);
+
+
+
+    REQUIRE(read(fd, buf, FBLOCKS) == FBLOCKS);
+    REQUIRE(memcmp(buf, g, FBLOCKS) == 0);
+
+    REQUIRE(close(fd) >= 0);
+    // remove file
+    REQUIRE(unlink(FILENAME) >= 0);
 }
