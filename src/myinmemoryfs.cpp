@@ -24,7 +24,6 @@
 
 #undef DEBUG
 
-// TODO: Comment lines to reduce debug messages
 #define DEBUG
 #define DEBUG_METHODS
 #define DEBUG_RETURN_VALUES
@@ -33,28 +32,25 @@
 #include <string.h>
 #include <errno.h>
 
+#include <vector>
+#include <map>
+
 #include "macros.h"
 #include "myfs.h"
 #include "myfs-info.h"
 #include "blockdevice.h"
 
+using namespace std;
+
 /// @brief Constructor of the in-memory file system class.
 ///
 /// You may add your own constructor code here.
-MyInMemoryFS::MyInMemoryFS() : MyFS() {
-
-    // TODO: [PART 1] Add your constructor code here
-
-}
+MyInMemoryFS::MyInMemoryFS() : MyFS() {}
 
 /// @brief Destructor of the in-memory file system class.
 ///
 /// You may add your own destructor code here.
-MyInMemoryFS::~MyInMemoryFS() {
-
-    // TODO: [PART 1] Add your cleanup code here
-
-}
+MyInMemoryFS::~MyInMemoryFS() {}
 
 /// @brief Create a new file.
 ///
@@ -67,7 +63,37 @@ MyInMemoryFS::~MyInMemoryFS() {
 int MyInMemoryFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Creating %s\n", path);
+
+    // Check if the filesystem is full
+    if(files.size() >= NUM_DIR_ENTRIES) {
+        LOG("Filesystem is full");
+        RETURN(-ENOSPC);
+    }
+
+    // Check length of given filename
+    if (strlen(path) - 1 > NAME_LENGTH) {
+        LOG("Filename too long");
+        RETURN(-EINVAL);
+    }
+
+    // Check if a file with the same name already exists
+    if(files.find(path) != files.end()) {
+        LOG("File already exists");
+        RETURN(-EEXIST);
+    }
+
+    LOG("Create the file");
+    // Create a new MyFsMemoryInfo struct for the file
+    MyFsMemoryInfo file;
+    file.gid = getgid();
+    file.uid = getuid();
+    file.mode = mode;
+    file.atime = file.ctime = file.mtime = time(NULL);
+
+    LOG("Add file to filesystem");
+    // Insert the file into the map
+    files.emplace(path, move(file));
 
     RETURN(0);
 }
@@ -81,7 +107,17 @@ int MyInMemoryFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
 int MyInMemoryFS::fuseUnlink(const char *path) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Deleting %s\n", path);
+
+    // Check if the file exists
+    auto iterator = files.find(path);
+    if (iterator == files.end()) {
+        LOG("File does not exist");
+        RETURN(-ENOENT);
+    }
+
+    // Remove the file from the map
+    files.erase(iterator);
 
     RETURN(0);
 }
@@ -98,9 +134,35 @@ int MyInMemoryFS::fuseUnlink(const char *path) {
 int MyInMemoryFS::fuseRename(const char *path, const char *newpath) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Renaming %s into %s\n", path, newpath);
 
-    return 0;
+    // Check if the old file exists
+    auto oldIterator = files.find(path);
+    if (oldIterator == files.end()) {
+        LOG("File does not exist");
+        RETURN(-ENOENT);
+    }
+
+    // Check if the new file already exists
+    auto newIterator = files.find(newpath);
+    if (newIterator != files.end()) {
+        LOG("File already exists");
+        RETURN(-EEXIST);
+    }
+
+    // Create a copy of the FileData struct for the new file
+    MyFsMemoryInfo newFile = oldIterator->second;
+
+    // Insert the new file into the map
+    files.emplace(newpath, move(newFile));
+
+    // Remove the old file from the map
+    files.erase(oldIterator);
+
+    // Update the change time of the new file
+    files.find(newpath)->second.ctime = time(nullptr);
+
+    RETURN(0);
 }
 
 /// @brief Get file meta data.
@@ -112,9 +174,7 @@ int MyInMemoryFS::fuseRename(const char *path, const char *newpath) {
 int MyInMemoryFS::fuseGetattr(const char *path, struct stat *statbuf) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
-
-    LOGF( "\tAttributes of %s requested\n", path );
+    LOGF("\tAttributes of %s requested\n", path);
 
     // GNU's definitions of the attributes (http://www.gnu.org/software/libc/manual/html_node/Attribute-Meanings.html):
     // 		st_uid: 	The user ID of the file’s owner.
@@ -133,26 +193,32 @@ int MyInMemoryFS::fuseGetattr(const char *path, struct stat *statbuf) {
 
     statbuf->st_uid = getuid(); // The owner of the file/directory is the user who mounted the filesystem
     statbuf->st_gid = getgid(); // The group of the file/directory is the same as the group of the user who mounted the filesystem
-    statbuf->st_atime = time( NULL ); // The last "a"ccess of the file/directory is right now
-    statbuf->st_mtime = time( NULL ); // The last "m"odification of the file/directory is right now
+    statbuf->st_atime = time(NULL); // The last "a"ccess of the file/directory is right now
 
-    int ret= 0;
-
-    if ( strcmp( path, "/" ) == 0 )
-    {
+    if (strcmp( path, "/" ) == 0) {
         statbuf->st_mode = S_IFDIR | 0755;
         statbuf->st_nlink = 2; // Why "two" hardlinks instead of "one"? The answer is here: http://unix.stackexchange.com/a/101536
     }
-    else if ( strcmp( path, "/file54" ) == 0 || ( strcmp( path, "/file349" ) == 0 ) )
-    {
-        statbuf->st_mode = S_IFREG | 0644;
-        statbuf->st_nlink = 1;
-        statbuf->st_size = 1024;
-    }
-    else
-        ret= -ENOENT;
+    else if(strlen(path) > 0) {
+        LOG("Path length > 0");
+        auto iterator = files.find(path);
 
-    RETURN(ret);
+        if(iterator == files.end()) {
+            LOG("File does not exist");
+            RETURN(-ENOENT);
+        }
+
+        statbuf->st_mode = iterator->second.mode;
+        statbuf->st_nlink = 1;
+        statbuf->st_size = iterator->second.content.size();
+        statbuf->st_mtime = iterator->second.mtime; // The last "m"odification of the file/directory is right now
+    }
+    else {
+        LOG("Path length <= 0");
+        RETURN(-ENOENT);
+    }
+
+    RETURN(0);
 }
 
 /// @brief Change file permissions.
@@ -165,7 +231,20 @@ int MyInMemoryFS::fuseGetattr(const char *path, struct stat *statbuf) {
 int MyInMemoryFS::fuseChmod(const char *path, mode_t mode) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Changing permissions of %s\n", path);
+
+    // Check if the file exists
+    auto iterator = files.find(path);
+    if (iterator == files.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Update the mode field
+    iterator->second.mode = mode;
+
+    // Update the changed time
+    iterator->second.ctime = time(nullptr);
 
     RETURN(0);
 }
@@ -181,7 +260,21 @@ int MyInMemoryFS::fuseChmod(const char *path, mode_t mode) {
 int MyInMemoryFS::fuseChown(const char *path, uid_t uid, gid_t gid) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Changing the owner of %s\n", path);
+
+    // Check if the file exists
+    auto iterator = files.find(path);
+    if (iterator == files.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Update the uid and gid fields
+    iterator->second.uid = uid;
+    iterator->second.gid = gid;
+
+    // Update the changed time
+    iterator->second.ctime = time(nullptr);
 
     RETURN(0);
 }
@@ -197,7 +290,32 @@ int MyInMemoryFS::fuseChown(const char *path, uid_t uid, gid_t gid) {
 int MyInMemoryFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Opening %s\n", path);
+
+    // Check how many files are open
+    if (openFiles.size() > NUM_OPEN_FILES) {
+        LOG("Too many open files");
+        RETURN(-EMFILE);
+    }
+
+    // Check if the file is already open
+    if (openFiles.find(path) != openFiles.end()) {
+        LOG("File is already open");
+        RETURN(-EPERM);
+    }
+
+    // Add the file to the open files set
+    openFiles.insert(path);
+
+    // Check if the file exists
+    auto iterator = files.find(path);
+    if (iterator == files.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Store the file data pointer in the fuse_file_info struct
+    fileInfo->fh = reinterpret_cast<uint64_t>(&iterator->second.content);
 
     RETURN(0);
 }
@@ -222,28 +340,31 @@ int MyInMemoryFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
 int MyInMemoryFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Reading %s\n", path);
 
-    LOGF( "--> Trying to read %s, %lu, %lu\n", path, (unsigned long) offset, size );
+    // Find the file in the map and copy its contents into the buffer
+    if (files.find(path) == files.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
 
-    char file54Text[] = "Hello World From File54!\n";
-    char file349Text[] = "Hello World From File349!\n";
-    char *selectedText = NULL;
+    // Get a pointer to the file data
+    vector<char>* content = reinterpret_cast<vector<char>*>(fileInfo->fh);
 
-    // ... //
+    // Check if the offset is within the file bounds
+    if (offset < 0 || offset >= content->size()) {
+        LOG("Offset is not within the file bounds");
+        RETURN(0);  // EOF
+    }
 
-    if ( strcmp( path, "/file54" ) == 0 )
-        selectedText = file54Text;
-    else if ( strcmp( path, "/file349" ) == 0 )
-        selectedText = file349Text;
-    else
-        return -ENOENT;
+    // Read data from the file
+    size_t count = min(size, content->size() - offset);
+    copy(content->begin() + offset, content->begin() + offset + count, buf);
 
-    // ... //
+    // Update the access time
+    files.find(path)->second.atime = time(nullptr);
 
-    memcpy( buf, selectedText + offset, size );
-
-    RETURN((int) (strlen( selectedText ) - offset));
+    RETURN(count);
 }
 
 /// @brief Write to a file.
@@ -264,9 +385,31 @@ int MyInMemoryFS::fuseRead(const char *path, char *buf, size_t size, off_t offse
 int MyInMemoryFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Writing %s\n", path);
 
-    RETURN(0);
+    // Get a pointer to the file data
+    vector<char>* content = reinterpret_cast<vector<char>*>(fileInfo->fh);
+
+    // Check if the offset is within the file bounds
+    if (offset < 0) {
+        LOGF("Invalid offset: %d", offset);
+        return -EINVAL;
+    }
+
+    // Truncate the file data
+    if (offset + size > content->size()) {
+        LOG("Truncate file");
+        content->resize(offset + size);
+    }
+
+    // Write data to the file
+    copy(buf, buf + size, content->begin() + offset);
+
+    // Update the modification and changed time
+    auto iterator = files.find(path);
+    iterator->second.mtime = iterator->second.ctime = time(nullptr);
+
+    RETURN(size);
 }
 
 /// @brief Close a file.
@@ -278,7 +421,16 @@ int MyInMemoryFS::fuseWrite(const char *path, const char *buf, size_t size, off_
 int MyInMemoryFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Removing the file %s\n", path);
+
+    // Check if the file exists
+    if (files.find(path) == files.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Remove the file from the open files set
+    openFiles.erase(path);
 
     RETURN(0);
 }
@@ -294,7 +446,21 @@ int MyInMemoryFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo)
 int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Set the size of %s\n", path);
+
+    // Check if the file exists
+    auto iterator = files.find(path);
+    if (iterator == files.end()) {
+        LOG("File already exists");
+        RETURN(-EEXIST);
+    }
+
+    // Truncate the file data
+    iterator->second.content.resize(newSize);
+
+    // Update the modification and changed time
+    iterator->second.mtime = time(nullptr);
+    iterator->second.ctime = time(nullptr);
 
     return 0;
 }
@@ -312,7 +478,18 @@ int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize) {
 int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Set the size of %s\n", path);
+
+    // Get a pointer to the file data
+    vector<char>* content = reinterpret_cast<vector<char>*>(fileInfo->fh);
+
+    // Truncate the file data
+    content->resize(newSize);
+
+    // Update the modification and changed time
+    auto iterator = files.find(path);
+    iterator->second.mtime = time(nullptr);
+    iterator->second.ctime = time(nullptr);
 
     RETURN(0);
 }
@@ -330,17 +507,19 @@ int MyInMemoryFS::fuseTruncate(const char *path, off_t newSize, struct fuse_file
 int MyInMemoryFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOGF("--> Getting The List of Files of %s\n", path);
 
-    LOGF( "--> Getting The List of Files of %s\n", path );
+    LOG("Add the '.' and '..' entries");
+    filler(buf, ".", NULL, 0); // Current Directory
+    filler(buf, "..", NULL, 0); // Parent Directory
 
-    filler( buf, ".", NULL, 0 ); // Current Directory
-    filler( buf, "..", NULL, 0 ); // Parent Directory
-
-    if ( strcmp( path, "/" ) == 0 ) // If the user is trying to show the files/directories of the root directory show the following
-    {
-        filler( buf, "file54", NULL, 0 );
-        filler( buf, "file349", NULL, 0 );
+    // If the user is trying to show the files of the root directory show the following
+    if (strcmp(path, "/") == 0) {
+        // Add the names of the files in the directory
+        for (const auto& iterator : files) {
+            LOGF("Add '%s'", iterator.first.c_str());
+            filler(buf, (iterator.first.c_str() + 1), NULL, 0);
+        }
     }
 
     RETURN(0);
@@ -363,9 +542,10 @@ void* MyInMemoryFS::fuseInit(struct fuse_conn_info *conn) {
         LOG("Starting logging...\n");
 
         LOG("Using in-memory mode");
-
-        // TODO: [PART 1] Implement your initialization methods here
     }
+
+    files = {};  // Initialize files
+    openFiles = {};  // Initialize openFiles
 
     RETURN(0);
 }
@@ -376,11 +556,13 @@ void* MyInMemoryFS::fuseInit(struct fuse_conn_info *conn) {
 void MyInMemoryFS::fuseDestroy() {
     LOGM();
 
-    // TODO: [PART 1] Implement this!
+    LOG("Freeing memory...");
 
+    files.clear();
+    openFiles.clear();
+
+    LOG("Shutting down");
 }
-
-// TODO: [PART 1] You may add your own additional methods here!
 
 // DO NOT EDIT ANYTHING BELOW THIS LINE!!!
 

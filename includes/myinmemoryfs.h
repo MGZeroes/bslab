@@ -8,10 +8,15 @@
 
 #include <fuse.h>
 #include <cmath>
+#include <string>
+#include <map>
+#include <unordered_set>
 
 #include "myfs.h"
 #include "blockdevice.h"
 #include "myfs-structs.h"
+
+using namespace std;
 
 /// @brief In-memory implementation of a simple file system.
 class MyInMemoryFS : public MyFS {
@@ -21,7 +26,9 @@ protected:
 public:
     static MyInMemoryFS *Instance();
 
-    // TODO: [PART 1] Add attributes of your file system here
+    map<string, MyFsMemoryInfo> files;
+    unordered_set<string> openFiles;
+
 
     MyInMemoryFS();
     ~MyInMemoryFS();
@@ -45,8 +52,6 @@ public:
     virtual int fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fileInfo);
     virtual int fuseTruncate(const char *path, off_t offset, struct fuse_file_info *fileInfo);
     virtual void fuseDestroy();
-
-    // TODO: Add methods of your file system here
 
 };
 
