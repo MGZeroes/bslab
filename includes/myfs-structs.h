@@ -72,11 +72,11 @@ struct MyFsDiskInfo {
 struct SuperBlock {
     uint32_t blockSize = BLOCK_SIZE;                            // Size of a block in bytes
     uint32_t numBlocks = MAX_BLOCK_COUNT;                       // Total number of blocks in the file system
-    uint16_t numFreeBlocks = numeric_limits<uint16_t>::max();   // Number of free blocks in this dmap block
-    uint8_t dmapBlockOffset = DMAP_BLOCK_OFFSET;                // Block number of the data map
-    uint8_t fatBlockOffset = FAT_BLOCK_OFFSET;                  // Block number of the file allocation table
-    uint8_t rootBlockOffset = ROOT_BLOCK_OFFSET;                // Block number of the root directory
-    uint16_t fileBlockOffset = FILE_BLOCK_OFFSET;               // Block number of the root directory
+    uint32_t numFreeBlocks = numeric_limits<uint16_t>::max();   // Number of free blocks in this dmap block
+    uint32_t dmapBlockOffset = DMAP_BLOCK_OFFSET;                // Block number of the data map
+    uint32_t fatBlockOffset = FAT_BLOCK_OFFSET;                  // Block number of the file allocation table
+    uint32_t rootBlockOffset = ROOT_BLOCK_OFFSET;                // Block number of the root directory
+    uint32_t fileBlockOffset = FILE_BLOCK_OFFSET;               // Block number of the root directory
 };
 
 struct DMapEntry {
