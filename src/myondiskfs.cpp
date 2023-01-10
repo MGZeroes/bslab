@@ -280,7 +280,25 @@ int MyOnDiskFS::fuseChmod(const char *path, mode_t mode) {
 int MyOnDiskFS::fuseChown(const char *path, uid_t uid, gid_t gid) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    LOGF("--> Changing the owner of %s", path);
+
+    readRoot();
+
+    // Check if the file exists
+    auto iterator = this->root.find(path);
+    if (iterator == this->root.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Update the uid and gid fields
+    iterator->second.uid = uid;
+    iterator->second.gid = gid;
+
+    // Update the changed time
+    iterator->second.ctime = time(NULL);
+
+    writeRoot();
 
     RETURN(0);
 }
