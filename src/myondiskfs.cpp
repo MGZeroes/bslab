@@ -113,7 +113,32 @@ int MyOnDiskFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
 int MyOnDiskFS::fuseUnlink(const char *path) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    readDmap();
+    readFat();
+    readRoot();
+
+    LOGF("--> Deleting %s", path);
+
+    // Check if the file exists
+    auto iterator = this->root.find(path);
+    if(iterator == this->root.end()) {
+        LOG("File does not exist");
+        RETURN(-ENOENT);
+    }
+
+    // Check if the file has data
+    if(iterator->second.size > 0) {
+        LOG("Freeing allocated files");
+        // Free all blocks that are allocated by this file
+        freeBlocks(iterator->second.data, bytesToBlocks(iterator->second.size));
+    }
+
+    // Remove the file from the map
+    this->root.erase(iterator);
+
+    writeDmap();
+    writeFat();
+    writeRoot();
 
     RETURN(0);
 }
