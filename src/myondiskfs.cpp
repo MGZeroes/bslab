@@ -595,7 +595,23 @@ int MyOnDiskFS::fuseTruncate(const char *path, off_t newSize, struct fuse_file_i
 int MyOnDiskFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    LOGF("--> Read the content of the directory %s", path);
+
+    LOG("Reading the Root");
+    readRoot();
+
+    LOG("Adding '.' and '..'");
+    filler(buf, ".", NULL, 0); // Current Directory
+    filler(buf, "..", NULL, 0); // Parent Directory
+
+    // If the user is trying to show the files of the root directory show the following
+    if(strcmp(path, "/") == 0) {
+        // Add the names of the files in the directory
+        for(const auto& iterator : this->root) {
+            LOGF("Adding '%s'", iterator.first.c_str());
+            filler(buf, (iterator.second.name), NULL, 0);
+        }
+    }
 
     RETURN(0);
 }
