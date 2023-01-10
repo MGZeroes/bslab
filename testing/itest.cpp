@@ -613,3 +613,40 @@ TEST_CASE("T-2.3", "[Part_2]") {
     // Close directory
     REQUIRE(closedir(dir) == 0);
 }
+
+TEST_CASE("T-2.4", "[Part_2]") {
+    printf("Testcase 2.4: Open more than 64 files\n");
+
+    int fileSize= SMALL_SIZE;
+    int writeSize= 16;
+    const char *filename = "file";
+    int noFiles= 64;
+
+    int ret;
+    size_t b;
+
+    int fd[noFiles];
+
+    // open all files
+    for(int f= 0; f < noFiles; f++) {
+        char nFilename[strlen(filename)+10];
+        sprintf(nFilename, "%s_%d", filename, f);
+        unlink(nFilename);
+        fd[f]= open(nFilename, O_EXCL | O_RDWR | O_CREAT, 0666);
+        REQUIRE(fd[f] >= 0);
+    }
+
+
+    REQUIRE(open("File65", O_EXCL | O_RDWR | O_CREAT, 0666) < 0);
+
+
+    // close all files
+    for(int f= 0; f < noFiles; f++) {
+        ret= close(fd[f]);
+        REQUIRE(ret >= 0);
+        char nFilename[strlen(filename)+10];
+        sprintf(nFilename, "%s_%d", filename, f);
+        unlink(nFilename);
+    }
+
+}
