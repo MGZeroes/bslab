@@ -246,7 +246,25 @@ int MyOnDiskFS::fuseGetattr(const char *path, struct stat *statbuf) {
 int MyOnDiskFS::fuseChmod(const char *path, mode_t mode) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    LOGF("--> Changing permissions of %s", path);
+
+    LOG("Reading root blocks");
+    readRoot();
+
+    // Check if the file exists
+    auto iterator = this->root.find(path);
+    if (iterator == this->root.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Update the mode field
+    iterator->second.mode = mode;
+
+    // Update the changed time
+    iterator->second.ctime = time(NULL);
+
+    writeRoot();
 
     RETURN(0);
 }
