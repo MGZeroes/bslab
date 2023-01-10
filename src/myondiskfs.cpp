@@ -314,7 +314,34 @@ int MyOnDiskFS::fuseChown(const char *path, uid_t uid, gid_t gid) {
 int MyOnDiskFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    LOGF("--> Opening %s", path);
+
+    readRoot();
+
+    // Check how many files are open
+    if (this->openFiles.size() > NUM_OPEN_FILES) {
+        LOG("Too many open files");
+        RETURN(-EMFILE);
+    }
+
+    // Check if the file is already open
+    if (this->openFiles.find(path) != this->openFiles.end()) {
+        LOG("File is already open");
+        RETURN(-EPERM);
+    }
+
+    // Check if the file exists
+    auto iterator = this->root.find(path);
+    if (iterator == this->root.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Add the file to the open files set
+    this->openFiles.insert(path);
+
+    // Store the first block in the fuse_file_info struct
+    fileInfo->fh = iterator->second.data;
 
     RETURN(0);
 }
