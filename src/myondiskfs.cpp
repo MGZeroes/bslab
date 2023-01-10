@@ -56,7 +56,50 @@ MyOnDiskFS::~MyOnDiskFS() {
 int MyOnDiskFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    LOGF("--> Creating %s", path);
+
+    readDmap();
+    readFat();
+    readRoot();
+
+    // Check if the filesystem is full
+    if(this->root.size() >= NUM_DIR_ENTRIES) {
+        LOG("Filesystem is full");
+        RETURN(-ENOSPC);
+    }
+
+    // Check length of given filename
+    if (strlen(path) - 1 > NAME_LENGTH) {
+        LOG("Filename too long");
+        RETURN(-EINVAL);
+    }
+
+    // Check if a file with the same name already exists
+    if(root.find(path) != this->root.end()) {
+        LOG("File already exists");
+        RETURN(-EEXIST);
+    }
+
+    LOG("Create file");
+    MyFsDiskInfo file;
+
+    // Strip the slash from the path to get the filename
+    strcpy(file.name, path+1);
+
+    file.size = 0;
+    file.data = NULL;
+    file.gid = getgid();
+    file.uid = getuid();
+    file.mode = mode;
+    file.atime = file.ctime = file.mtime = time(NULL);
+
+    LOG("Adding file to filesystem");
+    // Insert the file into the map
+    this->root.emplace(path, move(file));
+
+    writeDmap();
+    writeFat();
+    writeRoot();
 
     RETURN(0);
 }
