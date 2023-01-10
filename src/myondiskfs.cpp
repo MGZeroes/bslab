@@ -450,9 +450,79 @@ int MyOnDiskFS::fuseRead(const char *path, char *buf, size_t size, off_t offset,
 int MyOnDiskFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
     LOGM();
 
-    // TODO: [PART 2] Implement this!
+    LOGF("--> Writing %s", path);
+    readDmap();
+    readFat();
+    readRoot();
 
-    RETURN(0);
+    // Check if the file exists
+    auto iterator = this->root.find(path);
+    if (this->root.find(path) == this->root.end()) {
+        LOG("File does not exists");
+        RETURN(-ENOENT);
+    }
+
+    // Check if the offset is within the file bounds
+    if (offset < 0) {
+        LOGF("Invalid offset: %d", offset);
+        return -EINVAL;
+    }
+
+    LOGF("Trying to write %d bytes with an offset of %d bytes", size, offset);
+
+    // Calculate the block number and byte offset
+    off_t currentBlockNumber = max((u_long) bytesToBlocks(iterator->second.size), 1UL);
+    off_t blockOffset = offset / BLOCK_SIZE;
+    off_t byteOffset = offset % BLOCK_SIZE;
+    size_t numBlocks = bytesToBlocks(byteOffset + size);
+
+    // Check if we need to allocate more blocks
+    if(currentBlockNumber < blockOffset + numBlocks) {
+        fuseTruncate(path, offset + size);
+    }
+
+    // Get the first block to be written
+    uint16_t firstBlock = iterator->second.data;
+    for (int i = 0; i < blockOffset; ++i) {
+        // Check if we are in the bounds of the FAT
+        if(fat.at(firstBlock).isLast && (i < (blockOffset-1))) {
+            LOG("File table overflow");
+            RETURN(-ENFILE);
+        }
+
+        // Set next block as starting block
+        firstBlock = fat.at(firstBlock).nextBlock;
+    }
+
+    LOGF("Writing %d file blocks starting from block %d", numBlocks, firstBlock);
+
+    // Allocate a buffer for the file blocks
+    char *buffer = (char*) malloc(numBlocks * BLOCK_SIZE);
+    memset(buffer, 0, numBlocks * BLOCK_SIZE);
+
+    // Read the file into the buffer
+    readFile(firstBlock, buffer, numBlocks);
+
+    // Write the input buffer into the write buffer
+    memcpy(buffer + byteOffset, buf, size);
+
+    // Write the buffer into the file
+    writeFile(firstBlock, buffer, numBlocks);
+
+    // Free the buffer
+    free(buffer);
+
+    // Update size of the file
+    iterator->second.size = max(offset + size, iterator->second.size);
+
+    // Update the access and modified time
+    iterator->second.atime = iterator->second.mtime = time(NULL);
+
+    writeDmap();
+    writeFat();
+    writeRoot();
+
+    RETURN(size);
 }
 
 /// @brief Close a file.
