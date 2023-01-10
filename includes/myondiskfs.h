@@ -347,6 +347,10 @@ private:
         return block;
     }
 
+    uint16_t bytesToBlocks(size_t size) {
+        return ceil((double) size / BLOCK_SIZE);
+    }
+
     uint16_t allocateBlocks(int firstBlock, uint16_t numBlocks) {
 
         // Check if enough blocks are available
